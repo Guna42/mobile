@@ -149,7 +149,7 @@ def generate_monthly_report(user_email, entries, month_start=None, days_in_month
     p_value_sm   = ParagraphStyle('PValueSm',   fontSize=9,  textColor=INK, leading=13)
 
     # DATA ENGINE
-    journals = [e for e in entries if e.get("entry_type") == "journal_entry"]
+    journals = [e for e in entries if e.get("entry_type") in ("journal_entry", "voice_journal")]
     words    = [e for e in entries if e.get("entry_type") == "learned_word"]
 
     # Build day-of-month activity map (1-indexed)
@@ -179,7 +179,8 @@ def generate_monthly_report(user_email, entries, month_start=None, days_in_month
 
     emotion_map: dict[str, int] = {}
     for j in journals:
-        for emo in j.get("ai_response", {}).get("detected_emotions", []):
+        ai_resp = j.get("ai_response") or j.get("ai_analysis") or {}
+        for emo in ai_resp.get("detected_emotions", []):
             name = emo.get("word", "")
             if name: emotion_map[name] = emotion_map.get(name, 0) + 1
 
@@ -196,7 +197,11 @@ def generate_monthly_report(user_email, entries, month_start=None, days_in_month
         (f"{curr_streak}d",  "CURRENT STREAK",  "consecutive days",        "#52B788"),
     ]))
     story.append(Spacer(1, 1*cm))
-    recent_insight = journals[-1].get("ai_response", {}).get("pattern_insight", "Steady growth recorded.") if journals else "No journals this month yet."
+    if journals:
+        recent_ai = journals[-1].get("ai_response") or journals[-1].get("ai_analysis") or {}
+        recent_insight = recent_ai.get("pattern_insight", "Steady growth recorded.")
+    else:
+        recent_insight = "No journals this month yet."
     story.append(Paragraph(f'<font size="9" color="#1B4332"><b>RECENT INSIGHT:</b></font> <font size="9" color="#6B7280">{recent_insight}</font>', ParagraphStyle("desc")))
     story.append(Spacer(1, 3*cm))
     story.append(quote_card(PSYCH_QUOTES[0]))
@@ -291,7 +296,7 @@ def generate_monthly_report(user_email, entries, month_start=None, days_in_month
             created = j.get("created_at")
             date_str = created.strftime("%b %d, %Y · %I:%M %p") if isinstance(created, datetime) else "—"
             entry_text = j.get("entry_text", "").strip()
-            ai = j.get("ai_response", {})
+            ai = j.get("ai_response") or j.get("ai_analysis") or {}
             ruler = ai.get("ruler", {})
 
             emotions = ai.get("detected_emotions", [])

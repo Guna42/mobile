@@ -26,7 +26,7 @@ async def get_journal_history(user: dict = Depends(get_current_user)):
         result.append({
             "id": str(e["_id"]),
             "entry_text": e["entry_text"],
-            "ai_response": e["ai_response"],
+            "ai_response": e.get("ai_response") or e.get("ai_analysis") or {},
             "created_at": e["created_at"]
         })
     return result

@@ -335,7 +335,7 @@ class JournalService:
         all_emotions = []
         all_insights = []
         for e in entries:
-            analysis = e.get("ai_response", {})
+            analysis = e.get("ai_response") or e.get("ai_analysis") or {}
             for em in analysis.get("detected_emotions", []):
                 all_emotions.append(em.get("core", "Neutral"))
             insight = analysis.get("pattern_insight")

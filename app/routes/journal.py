@@ -214,7 +214,7 @@ async def get_legacy_history(user: dict = Depends(get_current_user)):
         
         combined = []
         for j in journals:
-            ai_resp = j.get("ai_response", {})
+            ai_resp = j.get("ai_response") or j.get("ai_analysis") or {}
             combined.append({
                 "type": "journal",
                 "data": {
