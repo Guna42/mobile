@@ -3,6 +3,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { House, Compass, CalendarBlank, SignOut, Plus } from '@phosphor-icons/react';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
+import CheckInLoader from './CheckInLoader';
 
 const MINT      = '#3AA38F';
 const MINT_LT   = '#A8E6CF';
@@ -14,6 +15,7 @@ const Navbar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const [showCheckInLoader, setShowCheckInLoader] = React.useState(false);
 
   if (!user) return null;
 
@@ -194,7 +196,12 @@ const Navbar: React.FC = () => {
           <motion.button
             whileHover={{ scale: 1.08, rotate: 90 }}
             whileTap={{ scale: 0.9, rotate: 0 }}
-            onClick={() => navigate('/journal')}
+            onClick={() => {
+              if ((window as any).mixpanel) {
+                (window as any).mixpanel.track('Started Daily Check-in', { source: 'navbar_fab' });
+              }
+              setShowCheckInLoader(true);
+            }}
             style={{
               width: 58,
               height: 58,
@@ -237,6 +244,9 @@ const Navbar: React.FC = () => {
           </motion.button>
         </div>
       </motion.div>
+      {showCheckInLoader && (
+        <CheckInLoader onComplete={() => { setShowCheckInLoader(false); navigate('/journal'); }} />
+      )}
     </nav>
   );
 };

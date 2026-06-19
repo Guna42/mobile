@@ -5,13 +5,13 @@ const config: CapacitorConfig = {
   appName: 'Emolit',
   webDir: 'build',
   server: {
+    androidScheme: 'https',
     cleartext: true
   },
-  plugins: {
-    CapacitorHttp: {
-      enabled: true,
-    },
-  },
+  // NOTE: CapacitorHttp is intentionally disabled because it intercepts
+  // and corrupts binary FormData (audio blob) uploads. Native fetch handles
+  // HTTPS calls to our server correctly without this plugin.
 };
 
 export default config;
+

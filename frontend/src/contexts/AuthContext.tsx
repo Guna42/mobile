@@ -44,36 +44,65 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
 
     useEffect(() => {
         // Listen for Firebase auth state changes
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+        const unsubscribe = onAuthStateChanged(auth, (firebaseUser) => {
             if (firebaseUser) {
-                try {
-                    // Force refresh to get latest emailVerified status
-                    await firebaseUser.reload();
-                    const updatedUser = auth.currentUser;
-                    
-                    if (updatedUser) {
-                        const idToken = await updatedUser.getIdToken();
-                        const userData: AuthUser = {
-                            email: updatedUser.email || '',
-                            full_name: updatedUser.displayName || updatedUser.email?.split('@')[0] || 'User'
-                        };
+                // 1. Instantly set user details from cached user info (synchronously)
+                const userData: AuthUser = {
+                    email: firebaseUser.email || '',
+                    full_name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User'
+                };
 
+                setUser(userData);
+                setIsEmailVerified(firebaseUser.emailVerified);
+
+                // Try to get token from localStorage first for instant API interceptor readiness
+                const cachedToken = localStorage.getItem('auth_token');
+                if (cachedToken) {
+                    setToken(cachedToken);
+                }
+
+                // Unblock application rendering immediately (0ms wait)
+                setIsLoading(false);
+
+                // 2. Perform token retrieval and reload in the background
+                (async () => {
+                    try {
+                        // Refresh the token in the background (resolves immediately if cached, or fetches if expired)
+                        const idToken = await firebaseUser.getIdToken();
                         setToken(idToken);
-                        setUser(userData);
-                        setIsEmailVerified(updatedUser.emailVerified);
-                        
-                        // Persist for axios interceptor
                         localStorage.setItem('auth_token', idToken);
                         localStorage.setItem('auth_user', JSON.stringify(userData));
+
+                        // Force refresh user profile to check for latest emailVerified status
+                        await firebaseUser.reload();
+                        const updatedUser = auth.currentUser;
+                        
+                        if (updatedUser) {
+                            const newIdToken = await updatedUser.getIdToken();
+                            const updatedUserData: AuthUser = {
+                                email: updatedUser.email || '',
+                                full_name: updatedUser.displayName || updatedUser.email?.split('@')[0] || 'User'
+                            };
+
+                            setToken(newIdToken);
+                            setUser(updatedUserData);
+                            setIsEmailVerified(updatedUser.emailVerified);
+                            
+                            localStorage.setItem('auth_token', newIdToken);
+                            localStorage.setItem('auth_user', JSON.stringify(updatedUserData));
+                        }
+                    } catch (error) {
+                        console.warn("Background auth profile refresh failed:", error);
+                        const errStr = String(error);
+                        if (errStr.includes('auth/user-token-expired') || errStr.includes('auth/user-not-found') || errStr.includes('auth/user-disabled')) {
+                            handleLogout();
+                        }
                     }
-                } catch (error) {
-                    console.error("Error updating user state:", error);
-                    handleLogout();
-                }
+                })();
             } else {
                 handleLogout();
+                setIsLoading(false);
             }
-            setIsLoading(false);
         });
 
         return () => unsubscribe();

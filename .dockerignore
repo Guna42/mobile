@@ -4,3 +4,5 @@ frontend/
 .git/
 .env
 *.pyc
+*.zip
+*.pem

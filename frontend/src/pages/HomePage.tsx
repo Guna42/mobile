@@ -4,9 +4,11 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../contexts/AuthContext';
 import { emotionAPI, JournalHistoryResponse } from '../services/api';
 import { Bell, Sparkle, PenNib, Compass, CalendarBlank, Flame, ArrowRight, BookOpen } from '@phosphor-icons/react';
+import { NotificationService } from '../services/notificationService';
 import { useQuery } from '@tanstack/react-query';
 import { JourneyOnboarding } from '../components/JourneyOnboarding';
 import CheckInLoader from '../components/CheckInLoader';
+import toast from 'react-hot-toast';
 
 // Load Playfair Display for the brand logo
 const playfairLink = document.createElement('link');
@@ -58,11 +60,103 @@ const HomePage: React.FC = () => {
   const [now, setNow] = useState(new Date());
   const [showLoader, setShowLoader] = useState(false);
 
+  const [activeTasks, setActiveTasks] = useState<any[]>([]);
+  const [showBellDropdown, setShowBellDropdown] = useState(false);
+
+  const loadTasks = () => {
+    const tasks = JSON.parse(localStorage.getItem('emolit_active_tasks') || '[]');
+    
+    // Filter to only include tasks scheduled for TODAY (any time from 12:00 AM to 11:59 PM)
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const filtered = tasks.filter((t: any) => {
+      if (!t.scheduledTime) return true; // Fallback if no timestamp
+      const tTime = new Date(t.scheduledTime).getTime();
+      return tTime >= todayStart.getTime() && tTime <= todayEnd.getTime();
+    });
+
+    setActiveTasks(filtered);
+  };
+
+  useEffect(() => {
+    loadTasks();
+    
+    const handleNotificationClick = () => {
+      loadTasks();
+      setShowBellDropdown(true);
+    };
+
+    window.addEventListener('task-notification-clicked', handleNotificationClick);
+    return () => {
+      window.removeEventListener('task-notification-clicked', handleNotificationClick);
+    };
+  }, []);
+
+  useEffect(() => {
+    const openTaskId = localStorage.getItem('open_task_id');
+    if (openTaskId) {
+      loadTasks();
+      setShowBellDropdown(true);
+    }
+  }, []);
+
+  const handleCompleteTask = (taskId: string, index: number) => {
+    const updated = activeTasks.map(t => t.id === taskId ? { ...t, status: 'completed' } : t);
+    setActiveTasks(updated);
+    localStorage.setItem('emolit_active_tasks', JSON.stringify(updated));
+
+    if (localStorage.getItem('open_task_id') === taskId) {
+      localStorage.removeItem('open_task_id');
+      localStorage.removeItem('open_task_text');
+    }
+
+    toast.success('Amazing job, bro! 🎉 Task completed!', {
+      duration: 4000,
+      icon: '🏆',
+      style: {
+        background: '#2F8F83',
+        color: '#fff',
+        borderRadius: '1rem',
+      }
+    });
+
+    if ((window as any).mixpanel) {
+      (window as any).mixpanel.track('Task Completed', {
+        taskId,
+        taskText: activeTasks.find(t => t.id === taskId)?.text,
+      });
+    }
+  };
+
+  const handleDismissTask = (taskId: string) => {
+    const updated = activeTasks.filter(t => t.id !== taskId);
+    setActiveTasks(updated);
+    localStorage.setItem('emolit_active_tasks', JSON.stringify(updated));
+    
+    if (localStorage.getItem('open_task_id') === taskId) {
+      localStorage.removeItem('open_task_id');
+      localStorage.removeItem('open_task_text');
+    }
+  };
+
+  const pendingCount = activeTasks.filter(t => t.status === 'pending').length;
+
   const handleCheckIn = () => {
+    if ((window as any).mixpanel) {
+      (window as any).mixpanel.track('Started Daily Check-in');
+    }
+
     setShowLoader(true);
   };
 
   useEffect(() => {
+    if ((window as any).mixpanel) {
+      (window as any).mixpanel.track('Viewed Home Page');
+    }
+
     const t = setInterval(() => setNow(new Date()), 60_000);
     return () => clearInterval(t);
   }, []);
@@ -75,6 +169,13 @@ const HomePage: React.FC = () => {
     queryKey: ['journalHistory'],
     queryFn: () => emotionAPI.getJournalHistory(),
   });
+
+  // Re-schedule catchy notifications and streak protections whenever history is refreshed
+  useEffect(() => {
+    if (historyRes) {
+      NotificationService.scheduleReminders();
+    }
+  }, [historyRes]);
 
   const streak = (() => {
     const entries = (historyRes as JournalHistoryResponse | undefined)?.entries ?? [];
@@ -175,7 +276,11 @@ const HomePage: React.FC = () => {
         {/* Notification bell — animated ring */}
         <motion.div
           whileTap={{ scale: 0.88 }}
-          animate={{ rotate: [0, -12, 12, -8, 8, 0] }}
+          onClick={() => {
+            loadTasks();
+            setShowBellDropdown(true);
+          }}
+          animate={pendingCount > 0 ? { rotate: [0, -12, 12, -8, 8, 0] } : {}}
           transition={{ repeat: Infinity, repeatDelay: 4, duration: 0.6, ease: 'easeInOut' }}
           style={{
             width: 38, height: 38, borderRadius: 12,
@@ -187,12 +292,14 @@ const HomePage: React.FC = () => {
           }}
         >
           <Bell size={18} weight="duotone" color={D.mintDark} />
-          <div style={{
-            position: 'absolute', top: 7, right: 7,
-            width: 7, height: 7, borderRadius: '50%',
-            background: D.pink,
-            border: `1.5px solid ${D.card}`,
-          }} />
+          {pendingCount > 0 && (
+            <div style={{
+              position: 'absolute', top: 7, right: 7,
+              width: 7, height: 7, borderRadius: '50%',
+              background: D.pink,
+              border: `1.5px solid ${D.card}`,
+            }} />
+          )}
         </motion.div>
       </div>
 
@@ -443,6 +550,122 @@ const HomePage: React.FC = () => {
         </motion.div>
 
       </div>
+
+      {/* ══ BELL NOTIFICATION INBOX OVERLAY ════════════════════════════════════ */}
+      <AnimatePresence>
+        {showBellDropdown && (
+          <div style={{
+            position: 'fixed', inset: 0, zIndex: 99,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            padding: '24px', background: 'rgba(0,0,0,0.4)',
+            backdropFilter: 'blur(8px)',
+            WebkitBackdropFilter: 'blur(8px)',
+          }}>
+            {/* Modal Container */}
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0, y: 30 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.9, opacity: 0, y: 30 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+              style={{
+                width: '100%', maxWidth: 360,
+                background: D.card, borderRadius: 28,
+                border: `1.5px solid ${D.border}`,
+                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.15)',
+                padding: '24px', display: 'flex', flexDirection: 'column',
+                gap: 16, position: 'relative', overflow: 'hidden'
+              }}
+            >
+              {/* Header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: `1.5px solid ${D.border}`, paddingBottom: 14 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <Bell size={22} weight="duotone" color={D.mintDark} />
+                  <span style={{ fontSize: 13, fontWeight: 800, color: D.text, textTransform: 'uppercase', letterSpacing: '0.05em' }}>Task Notifications</span>
+                </div>
+                <button
+                  onClick={() => setShowBellDropdown(false)}
+                  style={{
+                    border: 'none', background: 'none',
+                    fontSize: 12, fontWeight: 700,
+                    color: D.textSub, opacity: 0.6, cursor: 'pointer'
+                  }}
+                >
+                  Dismiss
+                </button>
+              </div>
+
+              {/* Task list */}
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 12, maxHeight: 280, overflowY: 'auto', paddingRight: 4 }}>
+                {activeTasks.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '24px 0', color: D.textSub, display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <Sparkle size={28} weight="duotone" color={D.mint} style={{ margin: '0 auto' }} />
+                    <p style={{ fontSize: 12, fontWeight: 500 }}>No pending tasks! Good job, bro.</p>
+                  </div>
+                ) : (
+                  activeTasks.map((t, idx) => {
+                    const isCompleted = t.status === 'completed';
+                    return (
+                      <div
+                        key={t.id}
+                        style={{
+                          padding: '14px', borderRadius: 18,
+                          background: isCompleted ? D.bgSecond : '#F9F9F9',
+                          border: `1.5px solid ${isCompleted ? D.mint : D.border}`,
+                          display: 'flex', flexDirection: 'column', gap: 10,
+                          transition: 'all 0.3s ease'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'start', gap: 10 }}>
+                          <span style={{
+                            width: 18, height: 18, borderRadius: '50%',
+                            background: isCompleted ? D.mintDeep : D.textDim,
+                            color: '#fff', fontSize: 10, fontWeight: 800,
+                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                            flexShrink: 0, marginTop: 1
+                          }}>{idx + 1}</span>
+                          <p style={{
+                            fontSize: 13, fontWeight: 600, color: D.text,
+                            textDecoration: isCompleted ? 'line-through' : 'none',
+                            opacity: isCompleted ? 0.6 : 1, lineHeight: 1.3
+                          }}>{t.text}</p>
+                        </div>
+
+                        {!isCompleted && (
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'end', gap: 8 }}>
+                            <button
+                              onClick={() => handleDismissTask(t.id)}
+                              style={{
+                                border: `1px solid ${D.border}`, background: D.card,
+                                borderRadius: 10, padding: '6px 12px',
+                                fontSize: 10, fontWeight: 700, color: D.textSub,
+                                cursor: 'pointer'
+                              }}
+                            >
+                              Remove
+                            </button>
+                            <button
+                              onClick={() => handleCompleteTask(t.id, idx)}
+                              style={{
+                                border: 'none', background: D.mintDark,
+                                borderRadius: 10, padding: '6px 12px',
+                                fontSize: 10, fontWeight: 700, color: '#fff',
+                                display: 'flex', alignItems: 'center', gap: 4,
+                                cursor: 'pointer', boxShadow: '0 4px 10px rgba(47,143,131,0.2)'
+                              }}
+                            >
+                              Completed ✅
+                            </button>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };

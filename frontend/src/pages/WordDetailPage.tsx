@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { emotionAPI, WordDetail } from '../services/api';
+import FullScreenLoader from '../components/FullScreenLoader';
 import {
   CaretLeft, Lightning, BookOpen, Brain,
   Sparkle, CircleNotch, Bookmark, Heart,
@@ -39,6 +40,10 @@ const WordDetailPage: React.FC = () => {
 
   useEffect(() => {
     const t = setInterval(() => setPulse(p => !p), 3500);
+    // Time how long user reads this word page
+    if ((window as any).mixpanel) {
+      (window as any).mixpanel.time_event('Viewed Word Detail');
+    }
     return () => clearInterval(t);
   }, []);
 
@@ -48,6 +53,13 @@ const WordDetailPage: React.FC = () => {
       try {
         const data = await emotionAPI.getWordDetails(wordName);
         setWord(data);
+        if ((window as any).mixpanel) {
+          (window as any).mixpanel.track('Viewed Word Detail', {
+            word: data.word,
+            core: data.core,
+            category: data.category,
+          });
+        }
         try {
           const { saved_words } = await emotionAPI.getSavedWords();
           setSaved(saved_words.some((w: any) => w.word === data.word));
@@ -63,8 +75,21 @@ const WordDetailPage: React.FC = () => {
     if (!word || saving) return;
     setSaving(true);
     try {
-      if (saved) { await emotionAPI.unsaveWord(word.word); setSaved(false); setSaveMsg('Removed'); }
-      else       { await emotionAPI.saveWord(word);        setSaved(true);  setSaveMsg('Saved!'); }
+      if (saved) {
+        await emotionAPI.unsaveWord(word.word);
+        setSaved(false);
+        setSaveMsg('Removed');
+        if ((window as any).mixpanel) {
+          (window as any).mixpanel.track('Word Unsaved', { word: word.word, core: word.core });
+        }
+      } else {
+        await emotionAPI.saveWord(word);
+        setSaved(true);
+        setSaveMsg('Saved!');
+        if ((window as any).mixpanel) {
+          (window as any).mixpanel.track('Word Saved', { word: word.word, core: word.core });
+        }
+      }
       setTimeout(() => setSaveMsg(''), 1800);
     } catch { setSaveMsg('Error'); setTimeout(() => setSaveMsg(''), 1800); }
     finally  { setSaving(false); }
@@ -72,13 +97,13 @@ const WordDetailPage: React.FC = () => {
 
   /* Loading */
   if (loading) return (
-    <div className="min-h-screen bg-white flex flex-col items-center justify-center gap-4">
-      <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1.1, ease: 'linear' }}
-        className="w-9 h-9 rounded-full border-[2.5px] border-[#1a6b5a] border-t-transparent" />
-      <p style={{ fontFamily: "'Lora', sans-serif", fontSize: 9, letterSpacing: '0.6em', color: 'rgba(26,107,90,0.3)', textTransform: 'uppercase', fontWeight: 700 }}>
-        Extracting nuance
-      </p>
-    </div>
+    <FullScreenLoader
+      gifSrc="/assets/word_details.gif"
+      gifSize={220}
+      title="Extracting Nuance"
+      subtitle="Deconstructing the emotional spectrum..."
+      accentColor="#1a6b5a"
+    />
   );
 
   /* Error */
@@ -353,7 +378,12 @@ const WordDetailPage: React.FC = () => {
             ╚══════════════════════════════════════╝ */}
         <motion.div {...up(0.45)}>
           <motion.button whileHover={{ y: -3 }} whileTap={{ scale: 0.97 }}
-            onClick={() => navigate('/journal')}
+            onClick={() => {
+              if ((window as any).mixpanel) {
+                (window as any).mixpanel.track('Journaled About Word', { word: word.word, core: word.core });
+              }
+              navigate('/journal');
+            }}
             className="w-full flex items-center justify-between rounded-[1.8rem] px-7 py-5"
             style={{
               background: `linear-gradient(145deg, ${theme.accent} 0%, ${theme.accent}cc 100%)`,

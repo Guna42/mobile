@@ -109,7 +109,7 @@ Map your deep reflection to these fields:
    - "section_3": (A Grounded Perspective)
    - "section_4": (Try This Now)
    - "section_5": (Think About Tomorrow)
-   - "What can be done": A combined string of Section 4 and Section 5 formatted as a numbered list (1., 2., 3.).
+   - "What can be done": Exactly 3 numbered items (1., 2., 3.). Each item must be a highly specific, short-term actionable task (can be completed in 5-30 minutes) directly related to the user's current journal entry (e.g., 'Take 5 minutes right now to write down the three most important wins of your day, highlighting what made them work, so you can lock in this momentum.'). DO NOT suggest generalized lifetime habits or broad goals. Write each as a descriptive, rich, and elegant sentence (around 15-25 words), avoiding extremely short fragments or single-word items.
 
 3. "reflection_question": A single short question to deepen self-awareness.
 4. "emotional_observation": A very brief 1-sentence summary of the core feeling.

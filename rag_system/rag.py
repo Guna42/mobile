@@ -156,7 +156,7 @@ Map your reflection to these fields:
    - "section_3": MAX 2 sentences. One validation sentence + one realistic reframe.
    - "section_4": MAX 1 sentence. One specific action to do right now.
    - "section_5": MAX 1 sentence. One journaling prompt for tomorrow.
-   - "What can be done": Exactly 3 numbered items (1., 2., 3.). Each item under 12 words.
+   - "What can be done": Exactly 3 numbered items (1., 2., 3.). Each item must be a highly specific, short-term actionable task (can be completed in 5-30 minutes) directly related to the user's current journal entry (e.g., 'Take 5 minutes right now to write down the three most important wins of your day, highlighting what made them work, so you can lock in this momentum.'). DO NOT suggest generalized lifetime habits or broad goals. Write each as a descriptive, rich, and elegant sentence (around 15-25 words), avoiding extremely short fragments or single-word items.
 
 3. "reflection_question": One short, direct question. Max 15 words.
 4. "emotional_observation": 1 sentence. The core feeling in plain language.
@@ -202,6 +202,34 @@ def _generate_claude(prompt: str, system_msg: str) -> str:
         return text[start:end + 1]
     return text
 
+_openai_client = None
+
+def _generate_openai(prompt: str, system_msg: str) -> str:
+    """Grounded generation via OpenAI, OpenRouter, or Groq (OpenAI-compatible)."""
+    global _openai_client
+    if _openai_client is None:
+        api_key = os.getenv("OPENAI_API_KEY", "")
+        base_url = os.getenv("OPENAI_BASE_URL", "").strip() or None
+        _openai_client = OpenAI(api_key=api_key, base_url=base_url)
+
+    base_url = os.getenv("OPENAI_BASE_URL", "").strip() or ""
+    env_model = os.getenv("OPENAI_MODEL", "").strip()
+    resolved_model = env_model or "gpt-4o-mini"
+    if "openrouter.ai" in base_url and resolved_model == "gpt-4o-mini":
+        resolved_model = "openai/gpt-4o-mini"
+
+    response = _openai_client.chat.completions.create(
+        model=resolved_model,
+        messages=[
+            {"role": "system", "content": system_msg},
+            {"role": "user", "content": prompt}
+        ],
+        max_tokens=LLM_MAX_TOKENS,
+        temperature=0.4,
+        response_format={"type": "json_object"}
+    )
+    return response.choices[0].message.content
+
 _groq_client = None
 
 def _generate_groq(prompt: str, system_msg: str) -> str:
@@ -241,8 +269,15 @@ def _generate_gemini(prompt: str, system_msg: str) -> str:
     return response.text
 
 def generate(query: str, chunks: List[Dict]) -> str:
-    """Grounded generation. Tries Claude first for quality, then Groq, then Gemini."""
+    """Grounded generation. Tries OpenRouter/OpenAI first, then Claude, then Groq, then Gemini."""
     prompt = build_prompt(query, chunks)
+
+    if os.getenv("OPENAI_API_KEY"):
+        try:
+            print("[rag] Using OpenAI/OpenRouter for grounded inference...")
+            return _generate_openai(prompt, SYSTEM_PROMPT)
+        except Exception as e:
+            print(f"[rag] OpenAI/OpenRouter failed, trying Claude: {e}")
 
     if ANTHROPIC_API_KEY:
         try:
@@ -311,7 +346,7 @@ def answer(query: str) -> Tuple[str, List[Dict]]:
     "section_3": "This feeling is valid and temporary.",
     "section_4": "1. Focus on only one small task for the next hour.",
     "section_5": "Reflect on what triggered this tomorrow.",
-    "What can be done": "1. Focus on only one small task for the next hour.\n2. Take three deep breaths right now.\n3. Step away from the screen for 5 minutes."
+    "What can be done": "1. Focus on only one small task for the next hour.\\n2. Take three deep breaths right now.\\n3. Step away from the screen for 5 minutes."
   }
 }'''
         return err_response, []

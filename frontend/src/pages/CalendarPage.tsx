@@ -2,12 +2,165 @@ import React, { useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useNavigate } from 'react-router-dom';
+import FullScreenLoader from '../components/FullScreenLoader';
 import {
     CaretLeft, CaretRight, Sparkle, ArrowUpRight, Lightning, 
     Compass, ArrowRight, FileText, FileArrowDown,
     CircleNotch, TrendUp
 } from '@phosphor-icons/react';
 import { emotionAPI } from '../services/api';
+import toast from 'react-hot-toast';
+
+interface EmojiConfig {
+    emoji: string;
+    url: string;
+    lightBg: string;
+    lightBorder: string;
+    darkBg: string;
+    darkBorder: string;
+    shadow: string;
+}
+
+const EMOTION_EMOJIS: Record<string, EmojiConfig> = {
+    // Database values
+    'Happy': {
+        emoji: '😊',
+        url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Smiling%20Face%20with%20Smiling%20Eyes.png',
+        lightBg: 'bg-gradient-to-br from-amber-50 to-amber-100/50',
+        lightBorder: 'border-amber-200/80',
+        darkBg: 'bg-gradient-to-br from-amber-950/25 to-amber-900/10',
+        darkBorder: 'border-amber-500/20',
+        shadow: 'shadow-[0_0_15px_rgba(245,158,11,0.15)]',
+    },
+    'Sad': {
+        emoji: '😢',
+        url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Pensive%20Face.png',
+        lightBg: 'bg-gradient-to-br from-indigo-50 to-indigo-100/50',
+        lightBorder: 'border-indigo-200/80',
+        darkBg: 'bg-gradient-to-br from-indigo-950/25 to-indigo-900/10',
+        darkBorder: 'border-indigo-500/20',
+        shadow: 'shadow-[0_0_15px_rgba(99,102,241,0.15)]',
+    },
+    'Angry': {
+        emoji: '😡',
+        url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Enraged%20Face.png',
+        lightBg: 'bg-gradient-to-br from-rose-50 to-rose-100/50',
+        lightBorder: 'border-rose-200/80',
+        darkBg: 'bg-gradient-to-br from-rose-950/25 to-rose-900/10',
+        darkBorder: 'border-rose-500/20',
+        shadow: 'shadow-[0_0_15px_rgba(239,68,68,0.15)]',
+    },
+    'Fearful': {
+        emoji: '😨',
+        url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Anxious%20Face%20with%20Sweat.png',
+        lightBg: 'bg-gradient-to-br from-violet-50 to-violet-100/50',
+        lightBorder: 'border-violet-200/80',
+        darkBg: 'bg-gradient-to-br from-violet-950/25 to-violet-900/10',
+        darkBorder: 'border-violet-500/20',
+        shadow: 'shadow-[0_0_15px_rgba(139,92,246,0.15)]',
+    },
+    'Disgusted': {
+        emoji: '🤢',
+        url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Nauseated%20Face.png',
+        lightBg: 'bg-gradient-to-br from-emerald-50 to-emerald-100/50',
+        lightBorder: 'border-emerald-200/80',
+        darkBg: 'bg-gradient-to-br from-emerald-950/25 to-emerald-900/10',
+        darkBorder: 'border-emerald-500/20',
+        shadow: 'shadow-[0_0_15px_rgba(16,185,129,0.15)]',
+    },
+    'Surprised': {
+        emoji: '😲',
+        url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Astonished%20Face.png',
+        lightBg: 'bg-gradient-to-br from-cyan-50 to-cyan-100/50',
+        lightBorder: 'border-cyan-200/80',
+        darkBg: 'bg-gradient-to-br from-cyan-950/25 to-cyan-900/10',
+        darkBorder: 'border-cyan-500/20',
+        shadow: 'shadow-[0_0_15px_rgba(6,182,212,0.15)]',
+    },
+
+    // UI Fallbacks
+    'Joy': {
+        emoji: '😊',
+        url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Smiling%20Face%20with%20Smiling%20Eyes.png',
+        lightBg: 'bg-gradient-to-br from-amber-50 to-amber-100/50',
+        lightBorder: 'border-amber-200/80',
+        darkBg: 'bg-gradient-to-br from-amber-950/25 to-amber-900/10',
+        darkBorder: 'border-amber-500/20',
+        shadow: 'shadow-[0_0_15px_rgba(245,158,11,0.15)]',
+    },
+    'Sadness': {
+        emoji: '😢',
+        url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Pensive%20Face.png',
+        lightBg: 'bg-gradient-to-br from-indigo-50 to-indigo-100/50',
+        lightBorder: 'border-indigo-200/80',
+        darkBg: 'bg-gradient-to-br from-indigo-950/25 to-indigo-900/10',
+        darkBorder: 'border-indigo-500/20',
+        shadow: 'shadow-[0_0_15px_rgba(99,102,241,0.15)]',
+    },
+    'Anger': {
+        emoji: '😡',
+        url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Enraged%20Face.png',
+        lightBg: 'bg-gradient-to-br from-rose-50 to-rose-100/50',
+        lightBorder: 'border-rose-200/80',
+        darkBg: 'bg-gradient-to-br from-rose-950/25 to-rose-900/10',
+        darkBorder: 'border-rose-500/20',
+        shadow: 'shadow-[0_0_15px_rgba(239,68,68,0.15)]',
+    },
+    'Fear': {
+        emoji: '😨',
+        url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Anxious%20Face%20with%20Sweat.png',
+        lightBg: 'bg-gradient-to-br from-violet-50 to-violet-100/50',
+        lightBorder: 'border-violet-200/80',
+        darkBg: 'bg-gradient-to-br from-violet-950/25 to-violet-900/10',
+        darkBorder: 'border-violet-500/20',
+        shadow: 'shadow-[0_0_15px_rgba(139,92,246,0.15)]',
+    },
+    'Disgust': {
+        emoji: '🤢',
+        url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Nauseated%20Face.png',
+        lightBg: 'bg-gradient-to-br from-emerald-50 to-emerald-100/50',
+        lightBorder: 'border-emerald-200/80',
+        darkBg: 'bg-gradient-to-br from-emerald-950/25 to-emerald-900/10',
+        darkBorder: 'border-emerald-500/20',
+        shadow: 'shadow-[0_0_15px_rgba(16,185,129,0.15)]',
+    },
+    'Surprise': {
+        emoji: '😲',
+        url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Astonished%20Face.png',
+        lightBg: 'bg-gradient-to-br from-cyan-50 to-cyan-100/50',
+        lightBorder: 'border-cyan-200/80',
+        darkBg: 'bg-gradient-to-br from-cyan-950/25 to-cyan-900/10',
+        darkBorder: 'border-cyan-500/20',
+        shadow: 'shadow-[0_0_15px_rgba(6,182,212,0.15)]',
+    },
+    'Love': {
+        emoji: '❤️',
+        url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Smiling%20Face%20with%20Hearts.png',
+        lightBg: 'bg-gradient-to-br from-pink-50 to-pink-100/50',
+        lightBorder: 'border-pink-200/80',
+        darkBg: 'bg-gradient-to-br from-pink-950/25 to-pink-900/10',
+        darkBorder: 'border-pink-500/20',
+        shadow: 'shadow-[0_0_15px_rgba(236,72,153,0.15)]',
+    },
+    'Trust': {
+        emoji: '🤝',
+        url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Hugging%20Face.png',
+        lightBg: 'bg-gradient-to-br from-teal-50 to-teal-100/50',
+        lightBorder: 'border-teal-200/80',
+        darkBg: 'bg-gradient-to-br from-teal-950/25 to-teal-900/10',
+        darkBorder: 'border-teal-500/20',
+        shadow: 'shadow-[0_0_15px_rgba(20,184,166,0.15)]',
+    },
+    'Anticipation': {
+        emoji: '🤩',
+        url: 'https://raw.githubusercontent.com/Tarikul-Islam-Anik/Animated-Fluent-Emojis/master/Emojis/Smilies/Thinking%20Face.png',
+        lightBg: 'bg-gradient-to-br from-orange-50 to-orange-100/50',
+        lightBorder: 'border-orange-200/80',
+        darkBg: 'bg-gradient-to-br from-orange-950/25 to-orange-900/10',
+        darkBorder: 'border-orange-500/20',
+        shadow: 'shadow-[0_0_15px_rgba(249,115,22,0.15)]',
+    },
+};
 
 const CalendarPage: React.FC = () => {
     const navigate = useNavigate();
@@ -23,8 +176,38 @@ const CalendarPage: React.FC = () => {
     const [selDay, setSelDay] = useState(formatDate(new Date()));
     const [loading, setLoading] = useState(true);
     const [isAnalyzingWeekly, setIsAnalyzingWeekly] = useState(false);
+    const [isDeleting, setIsDeleting] = useState(false);
+    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+
+    const handleDeleteRequest = async () => {
+        setIsDeleting(true);
+        try {
+            const res = await emotionAPI.requestDeleteAccount();
+            if (res.success) {
+                toast.success("Verification link sent! Check your email.", {
+                    style: {
+                        background: '#2F8F83',
+                        color: '#fff',
+                        borderRadius: '1rem',
+                    }
+                });
+                setShowDeleteConfirm(false);
+            } else {
+                toast.error("Failed to send deletion verification link.");
+            }
+        } catch (err: any) {
+            const msg = err?.response?.data?.detail || err?.message || "Error requesting account deletion.";
+            toast.error(msg);
+        } finally {
+            setIsDeleting(false);
+        }
+    };
 
     useEffect(() => {
+        if ((window as any).mixpanel) {
+            (window as any).mixpanel.track('Viewed Calendar Page');
+        }
+
         const loadHistory = async () => {
             try {
                 const res = await emotionAPI.getJournalHistory();
@@ -119,9 +302,12 @@ const CalendarPage: React.FC = () => {
     }, [history]);
 
     const handleMonthlyExport = async () => {
+        if ((window as any).mixpanel) {
+            (window as any).mixpanel.track('Exported PDF Report', { month: month + 1, year });
+        }
         setIsAnalyzingWeekly(true);
         try {
-            await emotionAPI.exportReport(month + 1, year); // month is 0-indexed in JS
+            await emotionAPI.exportReport(month + 1, year);
         } catch (e) {
             console.error("Monthly Export Fail:", e);
         } finally {
@@ -131,12 +317,13 @@ const CalendarPage: React.FC = () => {
 
     if (loading) {
         return (
-            <div className="min-h-screen flex items-center justify-center bg-white">
-                <div className="flex flex-col items-center gap-4">
-                    <CircleNotch className="w-12 h-12 text-primary animate-spin" weight="bold" />
-                    <p className="text-[10px] font-heading font-black tracking-widest text-primary/40 uppercase">Syncing Timeline</p>
-                </div>
-            </div>
+            <FullScreenLoader
+                gifSrc="/assets/calendar.gif"
+                gifSize={220}
+                title="Syncing Timeline"
+                subtitle="Restoring historical context..."
+                accentColor="#1a6b5a"
+            />
         );
     }
 
@@ -255,10 +442,63 @@ const CalendarPage: React.FC = () => {
                             const dayNum = new Date(dStr).getDate();
                             const isToday = dStr === formatDate(new Date());
 
+                            // Look up journal items and emojis
+                            const journalItem = (dataMap[dStr] || []).find(item => item.type === 'journal');
+                            let emojiConfig = null;
+                            if (journalItem) {
+                                const primaryEmotion = journalItem.data?.detected_emotions?.[0];
+                                const core = primaryEmotion?.core;
+                                const word = primaryEmotion?.word;
+                                emojiConfig = EMOTION_EMOJIS[core] || EMOTION_EMOJIS[word] || null;
+                            }
+
+                            if (emojiConfig) {
+                                return (
+                                    <button
+                                        key={idx}
+                                        onClick={() => {
+                                            setSelDay(dStr);
+                                            if ((window as any).mixpanel) {
+                                                (window as any).mixpanel.track('Calendar Day Viewed', {
+                                                    date:           dStr,
+                                                    has_entries:    hasAct,
+                                                    entry_count:    (dataMap[dStr] || []).length,
+                                                    is_today:       isToday,
+                                                    days_ago:       Math.round((Date.now() - new Date(dStr).getTime()) / 86400000),
+                                                });
+                                            }
+                                        }}
+                                        className={`relative aspect-square rounded-2xl flex items-center justify-center border transition-all ${isSel 
+                                            ? `scale-110 shadow-xl ${emojiConfig.darkBg} ${emojiConfig.darkBorder}` 
+                                            : `${emojiConfig.lightBg} ${emojiConfig.lightBorder} ${emojiConfig.shadow}`}`}
+                                    >
+                                        <span className={`absolute top-1 left-1.5 text-[9px] font-black ${isSel ? 'text-white/60' : 'text-primary/40'}`}>
+                                            {String(dayNum).padStart(2, '0')}
+                                        </span>
+                                        <img 
+                                            src={emojiConfig.url} 
+                                            alt={emojiConfig.emoji} 
+                                            className="w-8 h-8 object-contain mt-2" 
+                                        />
+                                    </button>
+                                );
+                            }
+
                             return (
                                 <button
                                     key={idx}
-                                    onClick={() => setSelDay(dStr)}
+                                    onClick={() => {
+                                        setSelDay(dStr);
+                                        if ((window as any).mixpanel) {
+                                            (window as any).mixpanel.track('Calendar Day Viewed', {
+                                                date:           dStr,
+                                                has_entries:    hasAct,
+                                                entry_count:    (dataMap[dStr] || []).length,
+                                                is_today:       isToday,
+                                                days_ago:       Math.round((Date.now() - new Date(dStr).getTime()) / 86400000),
+                                            });
+                                        }
+                                    }}
                                     className={`relative aspect-square rounded-xl flex items-center justify-center text-sm font-heading font-black transition-all ${isSel 
                                         ? 'bg-primary text-white shadow-lg shadow-primary/20 scale-110' 
                                         : isToday 
@@ -394,6 +634,53 @@ const CalendarPage: React.FC = () => {
                     <p className="text-primary font-heading font-bold italic leading-tight">
                         "{insight}"
                     </p>
+                </div>
+
+                {/* SECURITY & PRIVACY CARD */}
+                <div className="bg-rose-50/20 border border-rose-100/40 rounded-3xl p-8 space-y-6">
+                    <div className="flex items-center gap-2 text-rose-500">
+                        <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></div>
+                        <span className="text-[10px] font-heading font-black uppercase tracking-widest">Security & Privacy</span>
+                    </div>
+                    
+                    {!showDeleteConfirm ? (
+                        <div className="flex items-center justify-between gap-4">
+                            <div className="space-y-1">
+                                <h4 className="text-sm font-bold text-primary">Delete Emolit Account</h4>
+                                <p className="text-xs text-secondary/60">Permanently delete your profile and all journal data.</p>
+                            </div>
+                            <button
+                                onClick={() => setShowDeleteConfirm(true)}
+                                className="px-4 py-2.5 bg-rose-50 hover:bg-rose-100/50 text-rose-600 text-xs font-bold rounded-xl transition-all"
+                            >
+                                Delete Account
+                            </button>
+                        </div>
+                    ) : (
+                        <div className="space-y-4">
+                            <p className="text-xs text-rose-700 font-bold leading-relaxed">
+                                Are you sure you want to delete your account? This will send a secure verification link to your email to permanently delete all your entries and profile.
+                            </p>
+                            <div className="flex gap-2">
+                                <button
+                                    onClick={handleDeleteRequest}
+                                    disabled={isDeleting}
+                                    className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl disabled:opacity-50 transition-all flex items-center gap-2"
+                                >
+                                    {isDeleting ? (
+                                        <CircleNotch className="animate-spin" size={14} />
+                                    ) : 'Send Verification Link'}
+                                </button>
+                                <button
+                                    onClick={() => setShowDeleteConfirm(false)}
+                                    disabled={isDeleting}
+                                    className="px-4 py-2.5 bg-light-bg hover:bg-primary/5 text-primary text-xs font-bold rounded-xl transition-all"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
         </div>

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Link as RouterLink } from 'react-router-dom';
 import { motion, AnimatePresence, useMotionValue, useTransform } from 'framer-motion';
 import { emotionAPI, WordDetail } from '../services/api';
+import FullScreenLoader from '../components/FullScreenLoader';
 // ── Phosphor Icons (duotone / bold / fill for premium look) ─────────────────
 import {
   MagnifyingGlass, X, Sparkle, Lightning, CaretRight,
@@ -156,7 +157,18 @@ const WordCard: React.FC<{ word: WordDetail; conf: typeof CORES[string]; index: 
       transition={{ delay: index * 0.05, duration: 0.45, ease: 'easeOut' }}
       style={{ perspective: 900 }}
     >
-      <RouterLink to={`/word/${word.word}`}>
+      <RouterLink
+        to={`/word/${word.word}`}
+        onClick={() => {
+          if ((window as any).mixpanel) {
+            (window as any).mixpanel.track('Word Selected', {
+              word: word.word,
+              core: word.core,
+              category: word.category,
+            });
+          }
+        }}
+      >
         <motion.div
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
@@ -241,10 +253,23 @@ const SearchPage: React.FC = () => {
   const [dbCores, setDbCores] = useState<string[]>([]);
   const [selectedCore, setSelectedCore] = useState<string>('');
   const [loading, setLoading] = useState(true);
+  const [minLoadingDone, setMinLoadingDone] = useState(false);
   const [focused, setFocused] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setMinLoadingDone(true);
+    }, 2500);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    if ((window as any).mixpanel) {
+      (window as any).mixpanel.track('Viewed Search Page');
+      (window as any).mixpanel.time_event('Word Selected');
+    }
+
     const init = async () => {
       try {
         const [wordsData, coresData] = await Promise.all([
@@ -295,22 +320,37 @@ const SearchPage: React.FC = () => {
   const activeMappedKey = selectedCore ? matchCoreToConfig(selectedCore) : null;
   const activeConf = activeMappedKey ? CORES[activeMappedKey] : null;
 
+  // Debounced search tracking — fires 800ms after user stops typing
+  useEffect(() => {
+    if (!query.trim()) return;
+    const timer = setTimeout(() => {
+      if ((window as any).mixpanel) {
+        (window as any).mixpanel.track('Search Query Typed', {
+          query:          query.trim(),
+          query_length:   query.trim().length,
+          results_count:  searchResults.length,
+          found_results:  searchResults.length > 0,
+        });
+      }
+    }, 800);
+    return () => clearTimeout(timer);
+  }, [query, searchResults.length]);
+
   const recentSearches: string[] = JSON.parse(localStorage.getItem('recent_searches') || '[]').slice(0, 4);
   const saveSearch = (term: string) => {
     const prev: string[] = JSON.parse(localStorage.getItem('recent_searches') || '[]');
     localStorage.setItem('recent_searches', JSON.stringify([term, ...prev.filter(t => t !== term)].slice(0, 5)));
   };
 
-  if (loading) {
+  if (loading || !minLoadingDone) {
     return (
-      <div className="min-h-screen bg-[#FBFDFD] flex flex-col items-center justify-center gap-4">
-        <motion.div
-          animate={{ rotate: 360 }}
-          transition={{ repeat: Infinity, duration: 1.1, ease: 'linear' }}
-          className="w-9 h-9 rounded-full border-2 border-[#1a6b5a] border-t-transparent"
-        />
-        <p className="text-[8px] font-black uppercase tracking-[0.5em] text-[#1a6b5a]/30">Feeling the flow</p>
-      </div>
+      <FullScreenLoader
+        gifSrc="/assets/library_loader.gif"
+        gifSize={220}
+        title="Syncing Library"
+        subtitle="Calibrating emotional spectrum..."
+        accentColor="#1a6b5a"
+      />
     );
   }
 
@@ -375,13 +415,23 @@ const SearchPage: React.FC = () => {
             transition={{ type: 'spring', stiffness: 400, damping: 30 }}
           />
           <button
-            onClick={() => setMode('search')}
+            onClick={() => {
+              setMode('search');
+              if ((window as any).mixpanel) {
+                (window as any).mixpanel.track('Used Smart Search');
+              }
+            }}
             className={`flex-1 relative z-10 py-3 text-[10px] font-black uppercase tracking-widest transition-colors duration-300 ${mode === 'search' ? 'text-white' : 'text-secondary/40'}`}
           >
             Smart Search
           </button>
           <button
-            onClick={() => setMode('vibes')}
+            onClick={() => {
+              setMode('vibes');
+              if ((window as any).mixpanel) {
+                (window as any).mixpanel.track('Used Mood Spectrum');
+              }
+            }}
             className={`flex-1 relative z-10 py-3 text-[10px] font-black uppercase tracking-widest transition-colors duration-300 ${mode === 'vibes' ? 'text-white' : 'text-secondary/40'}`}
           >
             Mood Spectrum

@@ -10,13 +10,9 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     const { isAuthenticated, isLoading, isEmailVerified, resendVerification, logout } = useAuth();
     const location = useLocation();
 
-    // Show loading spinner while checking auth state
+    // Show clean white during auth check (App.tsx splash overlay covers this)
     if (isLoading) {
-        return (
-            <div className="min-h-screen mirror-bg flex items-center justify-center">
-                <div className="loading-spinner"></div>
-            </div>
-        );
+        return <div style={{ minHeight: '100vh', background: '#ffffff' }} />;
     }
 
     // Redirect to login if not authenticated

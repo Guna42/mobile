@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { emotionAPI, WordSummary } from '../services/api';
 import { Search, Filter, Sparkles, Activity } from 'lucide-react';
+import FullScreenLoader from '../components/FullScreenLoader';
 
 // ==========================================
 // 🎨 REFINED THEME SYSTEM 
@@ -27,20 +28,60 @@ const ExplorePage: React.FC = () => {
   const [selectedCategory, setSelectedCategory] = useState<string>('');
   const [words, setWords] = useState<WordSummary[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showLagLoader, setShowLagLoader] = useState(false);
   const [loadingWords, setLoadingWords] = useState(false);
 
   useEffect(() => {
+    if ((window as any).mixpanel) {
+      (window as any).mixpanel.track('Viewed Explore Page');
+    }
+
+    const startTime = Date.now();
+    let isCoresFetched = false;
+    let lagTimer: NodeJS.Timeout;
+
+    // Trigger lag loader if API does not respond within 250ms
+    lagTimer = setTimeout(() => {
+      if (!isCoresFetched) {
+        setShowLagLoader(true);
+      }
+    }, 250);
+
     const fetchCores = async () => {
       try {
         const data = await emotionAPI.getCores();
         setCores(data);
-      } catch (e) { console.error(e); }
-      finally { setLoading(false); }
+      } catch (e) {
+        console.error(e);
+      } finally {
+        isCoresFetched = true;
+        clearTimeout(lagTimer);
+
+        const elapsedTime = Date.now() - startTime;
+        if (elapsedTime > 250) {
+          // Lag occurred! Keep loader on screen for at least 3 seconds total
+          const remainingTime = Math.max(0, 3000 - elapsedTime);
+          setTimeout(() => {
+            setLoading(false);
+            setShowLagLoader(false);
+          }, remainingTime);
+        } else {
+          // No lag occurred! Instantly render without flashes
+          setLoading(false);
+          setShowLagLoader(false);
+        }
+      }
     };
     fetchCores();
   }, []);
 
   useEffect(() => {
+    if (selectedCore && (window as any).mixpanel) {
+      (window as any).mixpanel.track('Filtered Core Emotion', {
+        core: selectedCore
+      });
+    }
+
     const fetchData = async () => {
       setLoadingWords(true);
       try {
@@ -65,6 +106,13 @@ const ExplorePage: React.FC = () => {
 
   useEffect(() => {
     if (!selectedCore) return;
+
+    if (selectedCategory && (window as any).mixpanel) {
+      (window as any).mixpanel.track('Filtered Category', {
+        category: selectedCategory
+      });
+    }
+
     const filter = async () => {
       setLoadingWords(true);
       try {
@@ -77,6 +125,22 @@ const ExplorePage: React.FC = () => {
     };
     filter();
   }, [selectedCategory]);
+
+  if (showLagLoader) {
+    return (
+      <FullScreenLoader
+        gifSrc="/assets/library_loader.gif"
+        gifSize={220}
+        title="Syncing Library"
+        subtitle="Calibrating emotional spectrum..."
+        accentColor="#1a6b5a"
+      />
+    );
+  }
+
+  if (loading && !showLagLoader) {
+    return null; // Grace period to avoid layout flashes
+  }
 
   return (
     <div className="min-h-screen bg-white text-slate-900 pb-32">
@@ -155,9 +219,7 @@ const ExplorePage: React.FC = () => {
 
       {/* GALLERY GRID */}
       <div className="max-w-[1400px] mx-auto px-4 md:px-6">
-        {loading ? (
-          <div className="flex justify-center py-20"><div className="w-10 h-10 border-4 border-slate-200 border-t-slate-800 rounded-full animate-spin"></div></div>
-        ) : !selectedCore ? (
+        {!selectedCore ? (
           <div className="text-center py-10 md:py-20 opacity-40">
             <div className="w-16 h-16 md:w-20 md:h-20 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-6">
               <Filter className="w-6 h-6 md:w-8 md:h-8 text-slate-300" />

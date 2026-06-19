@@ -3,9 +3,8 @@ import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
 import { Capacitor } from '@capacitor/core';
 
-// For LOCAL DEVELOPMENT
-const API_BASE_URL = 'http://localhost:8000';
-// const API_BASE_URL = 'http://16.171.238.149:8000'; // AWS Production
+// Default to the live AWS backend so development works out-of-the-box without needing a local backend running
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://16.170.231.195:8000';
 
 console.log('[Emolit] Active Backend:', API_BASE_URL);
 
@@ -185,7 +184,7 @@ export const emotionAPI = {
 
   // Health check
   healthCheck: async (): Promise<{ status: string; service: string }> => {
-    const response = await api.get('/health');
+    const response = await api.get('/health', { timeout: 5000 });
     return response.data;
   },
 
@@ -197,11 +196,21 @@ export const emotionAPI = {
 
   // Authentication
   generateAndSendVerification: async (email: string, continueUrl: string): Promise<{ sent: boolean, message?: string, error?: string }> => {
-    const response = await api.post('/auth/generate-and-send-verification', { 
-      email, 
-      continue_url: continueUrl 
-    });
-    return response.data;
+    // Try /api/auth/... first for backend-v2 container compatibility, fallback to /auth/...
+    try {
+      const response = await api.post('/api/auth/generate-and-send-verification', { 
+        email, 
+        continue_url: continueUrl 
+      });
+      return response.data;
+    } catch (err) {
+      console.warn("Retrying verification request on fallback route...");
+      const response = await api.post('/auth/generate-and-send-verification', { 
+        email, 
+        continue_url: continueUrl 
+      });
+      return response.data;
+    }
   },
 
 
@@ -224,15 +233,29 @@ export const emotionAPI = {
 
   submitVoiceJournal: async (audioBlob: Blob): Promise<JournalResponse | JournalError> => {
     const formData = new FormData();
-    formData.append('file', audioBlob, 'journal_voice.webm');
+    const extension = audioBlob.type.includes('mp4') ? 'mp4' : 'webm';
+    formData.append('file', audioBlob, `journal_voice.${extension}`);
 
-    // We override Content-Type to undefined to let the browser handle the boundary
-    const response = await api.post('/journal/voice', formData, {
+    // IMPORTANT: Use native fetch() here, NOT axios.
+    // Capacitor's HTTP bridge intercepts axios requests and corrupts binary
+    // FormData (audio blob) payloads. Native fetch sends the raw multipart
+    // request correctly to our HTTPS backend.
+    const token = localStorage.getItem('auth_token');
+    const response = await fetch(`${API_BASE_URL}/journal/voice`, {
+      method: 'POST',
       headers: {
-        'Content-Type': 'multipart/form-data',
+        // Do NOT set Content-Type here — let the browser set it with the correct boundary
+        ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
       },
+      body: formData,
     });
-    return response.data;
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(errorData.detail || `Voice upload failed: ${response.status}`);
+    }
+
+    return response.json();
   },
 
   exportReport: async (month?: number, year?: number): Promise<void> => {
@@ -302,6 +325,27 @@ export const emotionAPI = {
   // Get all saved words
   getSavedWords: async (): Promise<{ saved_words: any[] }> => {
     const response = await api.get('/words/saved');
+    return response.data;
+  },
+
+  // Forgot Password Flow
+  sendForgotOTP: async (email: string): Promise<{ sent: boolean; message: string }> => {
+    const response = await api.post('/auth/forgot-password/send-otp', { email });
+    return response.data;
+  },
+
+  verifyForgotOTP: async (email: string, otp: string): Promise<{ valid: boolean; message: string }> => {
+    const response = await api.post('/auth/forgot-password/verify-otp', { email, otp });
+    return response.data;
+  },
+
+  resetForgotAndPassword: async (email: string, otp: string, newPassword: string): Promise<{ success: boolean; message: string }> => {
+    const response = await api.post('/auth/forgot-password/reset', { email, otp, new_password: newPassword });
+    return response.data;
+  },
+
+  requestDeleteAccount: async (): Promise<{ success: boolean; message: string }> => {
+    const response = await api.post('/auth/request-delete-account');
     return response.data;
   },
 };

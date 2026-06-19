@@ -87,7 +87,10 @@ async def submit_voice_journal(file: UploadFile = File(...), user: dict = Depend
         
         # 2. Call Sarvam AI Speech-to-Text-Translate
         async with httpx.AsyncClient() as client:
-            files = {'file': (file.filename, audio_content, file.content_type)}
+            # Sarvam rejects 'audio/webm;codecs=opus' but accepts 'audio/webm'
+            # Strip any codec suffix (e.g. ';codecs=opus') from the MIME type
+            clean_content_type = (file.content_type or 'audio/webm').split(';')[0].strip()
+            files = {'file': (file.filename, audio_content, clean_content_type)}
             headers = {'api-subscription-key': sarvam_api_key}
             
             # Sarvam API requires 'model' = 'saaras:v2.5' for translation/transcription

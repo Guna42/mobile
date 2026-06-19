@@ -4,9 +4,10 @@ import {
   Sun, Heart, Brain, Microphone, Stop, CaretLeft, 
   PaperPlaneTilt, Sparkle, Wind, Ghost, ShieldCheck, 
   Binoculars, Tree, Waves, Flower, Flame, Lightning,
-  ArrowRight, Pulse, Compass, CheckCircle
+  ArrowRight, Pulse, Compass, CheckCircle, Bell, Clock, Alarm
 } from '@phosphor-icons/react';
 import { emotionAPI, JournalResponse } from '../services/api';
+import { NotificationService } from '../services/notificationService';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 
@@ -54,18 +55,45 @@ const MOODS = [
   },
 ];
 
+const cleanListItem = (item: string): string => {
+  return item
+    .replace(/^\d+[\.\)]\s*/, '') // Strip leading numbers like "1. " or "2) "
+    .replace(/^-\s*/, '')          // Strip leading bullet points like "- "
+    .trim();
+};
+
 const parseActions = (raw?: string): string[] => {
   if (!raw?.trim()) return [];
-  const byLine = raw.split('\n').map(l => l.replace(/^\d+[\.\)]\s*/, '').trim()).filter(Boolean);
+  let cleaned = raw.trim();
+
+  // Robustly handle stringified arrays or Python list strings (e.g. ['a', 'b'])
+  if (cleaned.startsWith('[') && cleaned.endsWith(']')) {
+    try {
+      const jsonStr = cleaned.replace(/'/g, '"');
+      const parsed = JSON.parse(jsonStr);
+      if (Array.isArray(parsed)) {
+        return parsed.map(item => cleanListItem(String(item))).filter(Boolean);
+      }
+    } catch (e) {
+      // Fallback manual parsing if JSON fails
+      const stripped = cleaned.slice(1, -1);
+      return stripped
+        .split(',')
+        .map(item => cleanListItem(item.replace(/^['"]|['"]$/g, '')))
+        .filter(Boolean);
+    }
+  }
+
+  const byLine = cleaned.split('\n').map(l => cleanListItem(l)).filter(Boolean);
   if (byLine.length >= 2) return byLine;
-  const byNum = raw.split(/(?=\d+[\.\)]\s)/).map(l => l.replace(/^\d+[\.\)]\s*/, '').trim()).filter(Boolean);
+  const byNum = cleaned.split(/(?=\d+[\.\)]\s)/).map(l => cleanListItem(l)).filter(Boolean);
   return byNum.length >= 2 ? byNum : byLine;
 };
 
 const getActionItems = (ruler?: any): string[] => {
   const items = parseActions(ruler?.['What can be done']);
-  if (items.length > 0) return items;
-  return [ruler?.section_4, ruler?.section_5].filter((s): s is string => !!s?.trim());
+  if (items.length > 0) return items.slice(0, 2);
+  return [ruler?.section_4, ruler?.section_5].filter((s): s is string => !!s?.trim()).slice(0, 2);
 };
 
 const RulerRow: React.FC<{
@@ -98,18 +126,78 @@ const JournalPage: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [isRecording, setIsRecording] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [scheduledTasks, setScheduledTasks] = useState<Record<number, boolean>>({});
+  const [showReminderPicker, setShowReminderPicker] = useState<number | null>(null);
+  const [customMinutes, setCustomMinutes] = useState<string>('');
+
+  const handleScheduleReminder = async (idx: number, taskText: string, seconds: number) => {
+    const taskId = `task-${Date.now()}-${idx}`;
+    
+    const activeTasks = JSON.parse(localStorage.getItem('emolit_active_tasks') || '[]');
+    activeTasks.push({
+      id: taskId,
+      text: taskText,
+      scheduledTime: Date.now() + seconds * 1000,
+      status: 'pending'
+    });
+    localStorage.setItem('emolit_active_tasks', JSON.stringify(activeTasks));
+
+    await NotificationService.scheduleTaskReminder(taskId, taskText, seconds);
+
+    setScheduledTasks(prev => ({ ...prev, [idx]: true }));
+    setShowReminderPicker(null);
+    toast.success('Reminder set! We will nudge you.', { icon: '🔔' });
+  };
   
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const audioChunksRef = useRef<Blob[]>([]);
 
   useEffect(() => {
     setMounted(true);
+    if ((window as any).mixpanel) {
+      (window as any).mixpanel.track('Viewed Journal Page');
+      // Start timing how long they spend writing
+      (window as any).mixpanel.time_event('Journal Submitted');
+      (window as any).mixpanel.time_event('Voice Recording Started');
+    }
   }, []);
 
   const startRecording = async () => {
+    if ((window as any).mixpanel) {
+      (window as any).mixpanel.track('Voice Recording Started');
+    }
+
+    // 1. Check if mediaDevices API is available (blocked by browsers on insecure HTTP origins)
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      toast.error("Microphone recording requires a secure origin (localhost or HTTPS). Please use a secure connection.", {
+        duration: 6000,
+        icon: '⚠️',
+        style: { background: '#9E2A2B', color: '#fff', borderRadius: '1rem' }
+      });
+      return;
+    }
+
+    // 2. Check if MediaRecorder is supported by the client browser/WebView
+    if (typeof MediaRecorder === 'undefined') {
+      toast.error("Voice recording is not supported by this browser.", {
+        duration: 5000,
+        icon: '⚠️',
+        style: { background: '#9E2A2B', color: '#fff', borderRadius: '1rem' }
+      });
+      return;
+    }
+
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      const recorder = new MediaRecorder(stream);
+      
+      let options = {};
+      if (MediaRecorder.isTypeSupported('audio/webm')) {
+        options = { mimeType: 'audio/webm' };
+      } else if (MediaRecorder.isTypeSupported('audio/mp4')) {
+        options = { mimeType: 'audio/mp4' };
+      }
+      
+      const recorder = new MediaRecorder(stream, options);
       mediaRecorderRef.current = recorder;
       audioChunksRef.current = [];
 
@@ -120,7 +208,8 @@ const JournalPage: React.FC = () => {
       };
 
       recorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const mimeType = recorder.mimeType || 'audio/webm';
+        const audioBlob = new Blob(audioChunksRef.current, { type: mimeType });
         handleVoiceSubmit(audioBlob);
         stream.getTracks().forEach(track => track.stop());
       };
@@ -173,7 +262,19 @@ const JournalPage: React.FC = () => {
       if ('error' in response) {
         toast.error('Failed to analyze. Please try again.');
       } else {
-        setResult(response as JournalResponse);
+        const journalResult = response as JournalResponse;
+        setResult(journalResult);
+        
+        // Re-schedule notifications immediately since the user has journaled today!
+        NotificationService.scheduleReminders();
+
+        if ((window as any).mixpanel) {
+          (window as any).mixpanel.track('Journal Submitted', {
+            mood: MOODS[selectedMood]?.label,
+            entry_length: entry.trim().length,
+            emotions_detected: journalResult.detected_emotions?.map((e: any) => e.word),
+          });
+        }
         setTimeout(() => {
           document.getElementById('analysis-dashboard')?.scrollIntoView({ behavior: 'smooth' });
         }, 400);
@@ -261,7 +362,16 @@ const JournalPage: React.FC = () => {
                         <div key={idx} className="relative flex flex-col items-center">
                             <motion.button
                                 whileTap={{ scale: 0.8 }}
-                                onClick={() => setSelectedMood(idx)}
+                                onClick={() => {
+                                  if ((window as any).mixpanel) {
+                                    (window as any).mixpanel.track('Mood Selected', {
+                                      mood: MOODS[idx].label,
+                                      previous_mood: MOODS[selectedMood].label,
+                                      mood_index: idx,
+                                    });
+                                  }
+                                  setSelectedMood(idx);
+                                }}
                                 className={`relative h-14 w-14 flex items-center justify-center transition-all duration-500 ${isActive ? 'z-20' : 'opacity-20 grayscale hover:opacity-100'}`}
                             >
                                 <motion.img 
@@ -286,8 +396,6 @@ const JournalPage: React.FC = () => {
                 })}
             </div>
         </motion.div>
-
-        {/* WRITING CONSOLE */}
         <motion.div 
             initial={{ y: 20, opacity: 0 }}
             animate={{ y: 0, opacity: 1 }}
@@ -307,99 +415,58 @@ const JournalPage: React.FC = () => {
                         transition={{ duration: 0.3 }}
                         className="absolute inset-0 z-30 flex flex-col items-center justify-center rounded-[2rem] overflow-hidden"
                     >
-                        {/* Slow rotating background gradient */}
+                        {/* Frosted background */}
+                        <div className="absolute inset-0 bg-white/90 backdrop-blur-xl" />
+
+                        {/* Ambient color glow behind GIF */}
                         <motion.div
-                            className="absolute inset-0"
-                            animate={{
-                                background: [
-                                    `conic-gradient(from 0deg at 50% 50%, ${activeMood.accent}12, transparent 40%, ${activeMood.accent}08, transparent 80%, ${activeMood.accent}12)`,
-                                    `conic-gradient(from 180deg at 50% 50%, ${activeMood.accent}12, transparent 40%, ${activeMood.accent}08, transparent 80%, ${activeMood.accent}12)`,
-                                    `conic-gradient(from 360deg at 50% 50%, ${activeMood.accent}12, transparent 40%, ${activeMood.accent}08, transparent 80%, ${activeMood.accent}12)`,
-                                ]
+                            animate={{ scale: [1, 1.15, 1], opacity: [0.3, 0.6, 0.3] }}
+                            transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
+                            className="absolute"
+                            style={{
+                                width: 280, height: 280,
+                                borderRadius: '50%',
+                                background: `radial-gradient(circle, ${activeMood.color}25 0%, transparent 70%)`,
+                                filter: 'blur(30px)',
                             }}
-                            transition={{ duration: 6, repeat: Infinity, ease: 'linear' }}
                         />
-                        {/* White base so gradient shows subtly */}
-                        <div className="absolute inset-0 bg-white/85 backdrop-blur-sm" />
 
-                        <div className="relative z-10 flex flex-col items-center gap-8">
-                            {/* Rings + icon cluster */}
-                            <div className="relative flex items-center justify-center" style={{ width: 160, height: 160 }}>
-                                {/* 5 staggered expanding rings */}
-                                {[
-                                  { delay: 0,    maxR: 130, border: 1.8, startOp: 0.55 },
-                                  { delay: 0.5,  maxR: 110, border: 1.5, startOp: 0.50 },
-                                  { delay: 1.0,  maxR: 92,  border: 1.2, startOp: 0.45 },
-                                  { delay: 1.5,  maxR: 76,  border: 1.0, startOp: 0.40 },
-                                  { delay: 2.0,  maxR: 62,  border: 0.8, startOp: 0.35 },
-                                ].map((ring, i) => (
-                                    <motion.div
-                                        key={i}
-                                        className="absolute rounded-full"
-                                        style={{ borderStyle: 'solid', borderColor: activeMood.accent }}
-                                        animate={{
-                                            width:  [52, ring.maxR],
-                                            height: [52, ring.maxR],
-                                            opacity: [ring.startOp, 0],
-                                            borderWidth: [ring.border, 0],
-                                        }}
-                                        transition={{
-                                            duration: 2.8,
-                                            delay: ring.delay,
-                                            repeat: Infinity,
-                                            ease: 'easeOut',
-                                        }}
-                                    />
-                                ))}
-
-                                {/* Glowing center box */}
-                                <motion.div
-                                    className="w-[52px] h-[52px] rounded-2xl flex items-center justify-center relative z-10"
-                                    style={{ backgroundColor: activeMood.accent + '18' }}
-                                    animate={{
-                                        boxShadow: [
-                                            `0 0 0 0px ${activeMood.accent}00, 0 0 14px ${activeMood.accent}25`,
-                                            `0 0 0 6px ${activeMood.accent}15, 0 0 28px ${activeMood.accent}40`,
-                                            `0 0 0 0px ${activeMood.accent}00, 0 0 14px ${activeMood.accent}25`,
-                                        ],
-                                        scale: [1, 1.06, 1],
-                                    }}
-                                    transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
-                                >
-                                    <motion.div
-                                        animate={{ rotate: [0, 12, -12, 0] }}
-                                        transition={{ duration: 4, repeat: Infinity, ease: 'easeInOut' }}
-                                    >
-                                        <Brain size={26} weight="duotone" style={{ color: activeMood.accent }} />
-                                    </motion.div>
-                                </motion.div>
-                            </div>
-
-                            {/* Label + waveform stacked tightly */}
-                            <div className="flex flex-col items-center gap-3 -mt-4">
+                        {/* Free-floating GIF — no box, no clip */}
+                        <div className="relative z-10 flex flex-col items-center gap-5">
+                            <motion.img
+                                src="/assets/journal_result_analyzer.gif"
+                                alt="Analyzing thoughts..."
+                                initial={{ scale: 0.8, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={{ type: 'spring', stiffness: 160, damping: 18 }}
+                                style={{
+                                    width: 200,
+                                    height: 200,
+                                    objectFit: 'contain',
+                                    filter: `drop-shadow(0 8px 30px ${activeMood.color}40)`,
+                                }}
+                            />
+                            <div className="flex flex-col items-center gap-1.5">
                                 <motion.p
-                                    animate={{ opacity: [0.9, 0.35, 0.9] }}
+                                    animate={{ opacity: [0.9, 0.45, 0.9] }}
                                     transition={{ duration: 2.2, repeat: Infinity, ease: 'easeInOut' }}
-                                    className="text-[10px] font-black uppercase tracking-[0.45em]"
+                                    className="text-[11px] font-black uppercase tracking-[0.45em] text-center"
                                     style={{ color: activeMood.color }}
                                 >
                                     Analyzing emotions
                                 </motion.p>
-
-                                {/* Organic waveform */}
-                                <div className="flex gap-[3px] items-end" style={{ height: 28 }}>
-                                    {[0.3,0.6,1,0.5,0.85,0.4,1,0.65,0.9,0.35,0.75,1,0.5,0.8,0.4,0.95,0.6].map((h, i) => (
+                                <p className="text-[9px] font-bold text-secondary/30 text-center uppercase tracking-widest">
+                                    Decoding emotional signatures
+                                </p>
+                                {/* Typing dots */}
+                                <div className="flex gap-1.5 items-center justify-center mt-1">
+                                    {[0, 1, 2].map(i => (
                                         <motion.div
                                             key={i}
                                             className="rounded-full"
-                                            style={{ width: 2.5, backgroundColor: activeMood.accent }}
-                                            animate={{ height: [2, h * 26, 2] }}
-                                            transition={{
-                                                duration: 0.75 + h * 0.5,
-                                                delay: i * 0.055,
-                                                repeat: Infinity,
-                                                ease: 'easeInOut',
-                                            }}
+                                            style={{ width: 5, height: 5, background: activeMood.color }}
+                                            animate={{ scale: [1, 1.6, 1], opacity: [0.3, 1, 0.3] }}
+                                            transition={{ duration: 1, delay: i * 0.2, repeat: Infinity }}
                                         />
                                     ))}
                                 </div>
@@ -593,22 +660,104 @@ const JournalPage: React.FC = () => {
                                 </motion.div>
                                 <span className="text-[10px] font-black uppercase tracking-[0.35em] text-primary/40">Action Plan</span>
                             </div>
-                            <div className="space-y-3">
-                                {getActionItems(result.ruler).map((line, idx) => (
-                                    <div key={idx} className="flex items-start gap-3">
-                                        <motion.span
-                                            className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-[10px] font-black text-white"
-                                            style={{ backgroundColor: activeMood.accent }}
-                                            animate={{ scale: [1, 1.18, 1] }}
-                                            transition={{ duration: 2, delay: idx * 0.35, repeat: Infinity, ease: 'easeInOut' }}
-                                        >
-                                            {idx + 1}
-                                        </motion.span>
-                                        <p className="text-[13px] font-body font-normal text-primary/65 leading-relaxed">
-                                            {line}
-                                        </p>
-                                    </div>
-                                ))}
+                            <div className="space-y-4">
+                                {getActionItems(result.ruler).map((line, idx) => {
+                                    const isScheduled = scheduledTasks[idx];
+                                    const isPicking = showReminderPicker === idx;
+
+                                    return (
+                                        <div key={idx} className="flex flex-col gap-2 p-3.5 bg-light-bg/30 rounded-2xl border border-primary/5">
+                                            <div className="flex items-start gap-3">
+                                                <motion.span
+                                                    className="w-5 h-5 rounded-full flex items-center justify-center flex-shrink-0 mt-0.5 text-[10px] font-black text-white"
+                                                    style={{ backgroundColor: activeMood.accent }}
+                                                    animate={{ scale: [1, 1.18, 1] }}
+                                                    transition={{ duration: 2, delay: idx * 0.35, repeat: Infinity, ease: 'easeInOut' }}
+                                                >
+                                                    {idx + 1}
+                                                </motion.span>
+                                                <p className="text-[13.5px] font-body font-bold text-primary/75 leading-relaxed flex-1">
+                                                    {line}
+                                                </p>
+                                            </div>
+
+                                            <div className="flex items-center justify-end gap-2 mt-1">
+                                                {isScheduled ? (
+                                                    <span className="text-[10px] font-black uppercase tracking-wider text-green-600 bg-green-50 px-3 py-1 rounded-xl flex items-center gap-1">
+                                                        <Clock size={12} weight="fill" /> Reminder Set
+                                                    </span>
+                                                ) : isPicking ? (
+                                                    <div className="flex flex-col gap-2.5 items-end w-full animate-fadeIn mt-1 bg-white/40 backdrop-blur-md p-3.5 rounded-2xl border border-primary/5 shadow-sm">
+                                                        <p className="text-[10px] font-black uppercase tracking-wider text-primary/30 w-full text-left">Set Reminder Delay</p>
+                                                        <div className="flex flex-wrap gap-1.5 justify-start w-full">
+                                                            {[
+                                                                { label: '2m', sec: 120 },
+                                                                { label: '5m', sec: 300 },
+                                                                { label: '15m', sec: 900 },
+                                                                { label: '1h', sec: 3600 }
+                                                            ].map((opt) => (
+                                                                <button
+                                                                    key={opt.label}
+                                                                    onClick={() => handleScheduleReminder(idx, line, opt.sec)}
+                                                                    className="text-[9px] font-black uppercase tracking-wider text-white px-3 py-1.5 rounded-xl active:scale-95 transition-transform"
+                                                                    style={{ backgroundColor: activeMood.accent }}
+                                                                >
+                                                                    {opt.label}
+                                                                </button>
+                                                            ))}
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5 w-full mt-1 border-t border-primary/5 pt-2.5">
+                                                            <div className="relative flex-1 flex items-center bg-light-bg/40 rounded-xl px-2.5 py-1 border border-primary/5 focus-within:border-primary/20 transition-all">
+                                                                <input
+                                                                    type="number"
+                                                                    pattern="[0-9]*"
+                                                                    inputMode="numeric"
+                                                                    placeholder="Custom"
+                                                                    value={customMinutes}
+                                                                    onChange={(e) => setCustomMinutes(e.target.value)}
+                                                                    className="w-full bg-transparent border-none text-[12px] font-bold text-primary placeholder:text-primary/20 focus:outline-none focus:ring-0 p-0 text-left"
+                                                                    min="1"
+                                                                />
+                                                                <span className="text-[9px] font-black uppercase tracking-wider text-primary/30 ml-1">min</span>
+                                                            </div>
+                                                            <button
+                                                                onClick={() => {
+                                                                    const mins = parseInt(customMinutes);
+                                                                    if (isNaN(mins) || mins <= 0) {
+                                                                        toast.error("Please enter a valid number of minutes.");
+                                                                        return;
+                                                                    }
+                                                                    handleScheduleReminder(idx, line, mins * 60);
+                                                                    setCustomMinutes('');
+                                                                }}
+                                                                className="text-[9px] font-black uppercase tracking-wider text-white px-3 py-2 rounded-xl active:scale-95 transition-transform shrink-0"
+                                                                style={{ backgroundColor: activeMood.accent }}
+                                                            >
+                                                                Nudge Me
+                                                            </button>
+                                                            <button
+                                                                onClick={() => {
+                                                                    setShowReminderPicker(null);
+                                                                    setCustomMinutes('');
+                                                                }}
+                                                                className="text-[9px] font-black uppercase tracking-wider text-primary/40 hover:text-primary px-2 py-2 rounded-xl shrink-0"
+                                                            >
+                                                                Cancel
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => setShowReminderPicker(idx)}
+                                                        className="text-[10px] font-black uppercase tracking-wider text-primary/50 hover:text-primary active:scale-95 transition-all flex items-center gap-1 border border-primary/10 hover:border-primary/20 px-3 py-1.5 rounded-xl bg-white shadow-sm"
+                                                    >
+                                                        <Bell size={12} weight="duotone" /> Remind Me
+                                                    </button>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
                             </div>
                         </div>
 
