@@ -1,0 +1,679 @@
+{
+  "info": {
+    "name": "Emolit Mobile API Collection",
+    "_postman_id": "7c885ce8-c3c2-4f53-96ee-d38aaa1329e1",
+    "description": "Professional API collection for the Emolit Mobile App Backend. Built for backend-frontend synchronization (React Native / Flutter clients).\n\n### Authentication\nMost endpoints require user authentication via a **Firebase ID Token** (JWT). Pass this token in the `Authorization` header as `Bearer <token>`.\n\n### Base URL\n- Production: `https://mobile-api.emolit.com`\n- Local: `http://localhost:8000` or `http://10.0.2.2:8000` (Android Emulator)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://mobile-api.emolit.com",
+      "type": "string",
+      "description": "Target server URL"
+    },
+    {
+      "key": "authToken",
+      "value": "YOUR_FIREBASE_ID_TOKEN_HERE",
+      "type": "string",
+      "description": "Firebase JWT token obtained after user logs in/registers"
+    }
+  ],
+  "item": [
+    {
+      "name": "System & Health",
+      "item": [
+        {
+          "name": "Root Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": []
+            },
+            "description": "Simple server sanity and version check."
+          }
+        },
+        {
+          "name": "Health Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/health",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "health"
+              ]
+            },
+            "description": "Checks database connectivity and service availability status."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Authentication & Account",
+      "item": [
+        {
+          "name": "Send Verification Email",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"continue_url\": \"https://mobile-api.emolit.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/generate-and-send-verification",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "generate-and-send-verification"
+              ]
+            },
+            "description": "Generates a Firebase verification link and sends a branded verification email to the user."
+          }
+        },
+        {
+          "name": "Request Delete Account",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/auth/request-delete-account",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "request-delete-account"
+              ]
+            },
+            "description": "Initiates user account deletion. Sends a secure confirmation email link to the registered email."
+          }
+        },
+        {
+          "name": "Confirm Delete Account",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/auth/confirm-delete-account?token=CONFIRMATION_TOKEN",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "confirm-delete-account"
+              ],
+              "query": [
+                {
+                  "key": "token",
+                  "value": "CONFIRMATION_TOKEN",
+                  "description": "The deletion verification token sent to the user's email"
+                }
+              ]
+            },
+            "description": "Callback URL executed from the confirmation email. Permanently deletes the user profile and data."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Password Reset (OTP Flow)",
+      "item": [
+        {
+          "name": "Send Reset OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/forgot-password/send-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "forgot-password",
+                "send-otp"
+              ]
+            },
+            "description": "Generates and sends a 6-digit verification code to the registered email for password recovery."
+          }
+        },
+        {
+          "name": "Verify Reset OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"otp\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/forgot-password/verify-otp",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "forgot-password",
+                "verify-otp"
+              ]
+            },
+            "description": "Validates the recovery code. Returns validation status and validity flag."
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"user@example.com\",\n  \"otp\": \"123456\",\n  \"new_password\": \"NewSecurePassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/forgot-password/reset",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "auth",
+                "forgot-password",
+                "reset"
+              ]
+            },
+            "description": "Updates password in Firebase Auth after verification of recovery OTP code."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Journaling",
+      "item": [
+        {
+          "name": "Submit Journal (Text)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"entry\": \"Today I felt really anxious and overwhelmed before the team sync, but after some breathing exercises I felt calmer.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/journal",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "journal"
+              ]
+            },
+            "description": "Submits a textual journal entry. The AI engine processes the text to identify dominant emotions, insights, and actions according to the RULER framework."
+          }
+        },
+        {
+          "name": "Submit Journal (Voice)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "description": "Audio voice recording (supported: webm, mp3, wav, aac, m4a)",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{baseUrl}}/journal/voice",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "journal",
+                "voice"
+              ]
+            },
+            "description": "Uploads an audio journal entry. The server transcribes the recording using the Sarvam voice API and then processes the text."
+          }
+        },
+        {
+          "name": "Journal History (Calendar Page)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/journal/history",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "journal",
+                "history"
+              ]
+            },
+            "description": "Fetches combined entries list: journal entries (with detected emotions), learned words, and bookmarked words. Main feed for the Calendar display."
+          }
+        },
+        {
+          "name": "Journal Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/journal/stats",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "journal",
+                "stats"
+              ]
+            },
+            "description": "Returns basic user statistics including total journal entries and top emotional categories."
+          }
+        },
+        {
+          "name": "Weekly Analysis (Deprecated)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/journal/weekly-analysis",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "journal",
+                "weekly-analysis"
+              ]
+            },
+            "description": "Returns redirect notification to upgrade to the monthly report option."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Words & Dictionary",
+      "item": [
+        {
+          "name": "Get Core Emotions",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cores",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cores"
+              ]
+            },
+            "description": "Retrieve all core emotion folders (e.g. Joy, Fear, Anger, Sadness, Disgust)."
+          }
+        },
+        {
+          "name": "Get Categories by Core",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/cores/:core/categories",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "cores",
+                ":core",
+                "categories"
+              ],
+              "variable": [
+                {
+                  "key": "core",
+                  "value": "Fear",
+                  "description": "Name of the core emotion"
+                }
+              ]
+            },
+            "description": "Retrieves the vocabulary categories belonging to a particular core emotion."
+          }
+        },
+        {
+          "name": "Filter Words",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/words?core=Fear&category=Anxiety",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "words"
+              ],
+              "query": [
+                {
+                  "key": "core",
+                  "value": "Fear",
+                  "description": "Filter by core emotion folder"
+                },
+                {
+                  "key": "category",
+                  "value": "Anxiety",
+                  "description": "Filter by subcategory (requires core)"
+                }
+              ]
+            },
+            "description": "Query words with optional core and subcategory filters."
+          }
+        },
+        {
+          "name": "Daily Word",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/words/daily",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "words",
+                "daily"
+              ]
+            },
+            "description": "Fetch the curated daily emotional vocabulary word. Returns the same word if called multiple times on the same date."
+          }
+        },
+        {
+          "name": "Search Vocabulary",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/words/search?q=anx",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "words",
+                "search"
+              ],
+              "query": [
+                {
+                  "key": "q",
+                  "value": "anx",
+                  "description": "Keyword string to search within vocabulary words (case-insensitive)"
+                }
+              ]
+            },
+            "description": "Search the entire emotion word database."
+          }
+        },
+        {
+          "name": "Word Details",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/words/:word_name",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "words",
+                ":word_name"
+              ],
+              "variable": [
+                {
+                  "key": "word_name",
+                  "value": "Anxious",
+                  "description": "The exact emotional vocabulary word"
+                }
+              ]
+            },
+            "description": "Get detailed metadata for a specific emotional word (synonyms, intensity, prompts, body signals)."
+          }
+        },
+        {
+          "name": "Sync Learned Word",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"word_data\": {\n    \"word\": \"Resilient\",\n    \"core\": \"Joy\",\n    \"category\": \"Strength\",\n    \"metadata\": {\n      \"definition\": \"Able to withstand or recover quickly from difficult conditions.\",\n      \"example\": \"He was resilient in the face of adversity.\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/journal/track-word",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "journal",
+                "track-word"
+              ]
+            },
+            "description": "Saves a vocabulary word the user successfully completed learning tasks for. Syncs it to MongoDB for their history."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Bookmarked Words",
+      "item": [
+        {
+          "name": "Bookmark Word",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"word_data\": {\n    \"word\": \"Apprehensive\",\n    \"core\": \"Fear\",\n    \"category\": \"Anxiety\",\n    \"metadata\": {\n      \"definition\": \"Anxious or fearful that something bad or unpleasant will happen.\",\n      \"intensity\": 3,\n      \"synonyms\": [\n        \"Anxious\",\n        \"Fearful\"\n      ],\n      \"example\": \"She felt apprehensive about her first flight.\"\n    }\n  }\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/words/save",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "words",
+                "save"
+              ]
+            },
+            "description": "Saves a vocabulary word as bookmarked/starred for user collection."
+          }
+        },
+        {
+          "name": "Get Bookmarked Words",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/words/saved",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "words",
+                "saved"
+              ]
+            },
+            "description": "Retrieves the list of bookmarked words for the authenticated user."
+          }
+        },
+        {
+          "name": "Remove Bookmarked Word",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/words/save/:word_name",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "words",
+                "save",
+                ":word_name"
+              ],
+              "variable": [
+                {
+                  "key": "word_name",
+                  "value": "Apprehensive",
+                  "description": "The name of the word to unsave"
+                }
+              ]
+            },
+            "description": "Unbookmarks/deletes a previously saved word from the user's list."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Monthly Reports",
+      "item": [
+        {
+          "name": "Download PDF Report",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{authToken}}"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/export/monthly-report?month=6&year=2026",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "export",
+                "monthly-report"
+              ],
+              "query": [
+                {
+                  "key": "month",
+                  "value": "6",
+                  "description": "Month number (1-12)"
+                },
+                {
+                  "key": "year",
+                  "value": "2026",
+                  "description": "Year (e.g. 2026)"
+                }
+              ]
+            },
+            "description": "Generates and streams a custom, highly styled PDF containing the monthly emotional analytics report."
+          }
+        }
+      ]
+    }
+  ]
+}
