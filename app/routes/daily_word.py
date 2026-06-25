@@ -7,7 +7,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from app.auth import get_current_user
 from app.database import get_collection
 from bson import ObjectId
-// Slack Integration Test
+# Slack Integration Test
 
 logger = logging.getLogger("emolit.daily_word")
 router = APIRouter(tags=["daily-word"])
