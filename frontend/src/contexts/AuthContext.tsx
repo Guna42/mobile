@@ -7,7 +7,7 @@ import {
     updateProfile
 } from 'firebase/auth';
 import { auth } from '../firebase';
-import { emotionAPI, AuthUser } from '../services/api';
+import { emotionAPI, AuthUser, UserProfile } from '../services/api';
 import toast from 'react-hot-toast';
 
 interface AuthContextType {
@@ -16,10 +16,12 @@ interface AuthContextType {
     isAuthenticated: boolean;
     isEmailVerified: boolean;
     isLoading: boolean;
+    isOnboarded: boolean;
     login: (email: string, password: string) => Promise<void>;
     register: (email: string, password: string, fullName?: string) => Promise<void>;
     logout: () => Promise<void>;
     resendVerification: () => Promise<void>;
+    markOnboarded: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -41,6 +43,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     const [token, setToken] = useState<string | null>(null);
     const [isEmailVerified, setIsEmailVerified] = useState(false);
     const [isLoading, setIsLoading] = useState(true);
+    const [isOnboarded, setIsOnboarded] = useState(true); // default true to avoid flash
 
     useEffect(() => {
         // Listen for Firebase auth state changes
@@ -112,9 +115,12 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         setUser(null);
         setToken(null);
         setIsEmailVerified(false);
+        setIsOnboarded(true);
         localStorage.removeItem('auth_token');
         localStorage.removeItem('auth_user');
     };
+
+    const markOnboarded = () => setIsOnboarded(true);
 
     const login = async (email: string, password: string) => {
         try {
@@ -209,16 +215,31 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
         }
     };
 
+    // Fetch onboarding status after auth is confirmed
+    React.useEffect(() => {
+        if (user && token && isEmailVerified) {
+            emotionAPI.getUserProfile()
+                .then((profile: UserProfile) => {
+                    setIsOnboarded(profile.onboarded ?? false);
+                })
+                .catch(() => {
+                    setIsOnboarded(true); // If network fails, don't block the user
+                });
+        }
+    }, [user, token, isEmailVerified]);
+
     const value: AuthContextType = {
         user,
         token,
         isAuthenticated: !!user && !!token,
         isEmailVerified,
         isLoading,
+        isOnboarded,
         login,
         register,
         logout,
-        resendVerification
+        resendVerification,
+        markOnboarded
     };
 
     return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

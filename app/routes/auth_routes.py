@@ -1,10 +1,12 @@
 from fastapi import APIRouter, HTTPException, Depends, Request
 from fastapi.responses import HTMLResponse
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from app.services.email_service import send_verification_email, send_deletion_email
 from app.auth import get_current_user
+from typing import Optional
 import logging
 import os
+from datetime import date
 
 logger = logging.getLogger("emolit.auth")
 router = APIRouter(tags=["auth"])
@@ -380,4 +382,103 @@ async def reset_forgot_password(payload: ResetPasswordRequest):
         raise he
     except Exception as e:
         logger.error(f"❌ RESET PASSWORD ERROR: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────────
+#  USER PROFILE — ONBOARDING DATA COLLECTION
+# ─────────────────────────────────────────────
+
+class UserProfileUpdate(BaseModel):
+    full_name:       str = Field(..., min_length=1)
+    dob:             str = Field(..., description="Date of birth in YYYY-MM-DD format")
+    gender:          str
+    role:            str = Field(..., description="Student or Working Professional")
+    country:         str
+    state:           str
+    native_language: str
+
+def _calculate_age(dob_str: str) -> int:
+    """Calculate age from a YYYY-MM-DD date string."""
+    try:
+        birth = date.fromisoformat(dob_str)
+        today = date.today()
+        return today.year - birth.year - ((today.month, today.day) < (birth.month, birth.day))
+    except Exception:
+        return 0
+
+@router.get("/auth/profile")
+@router.get("/api/auth/profile")
+async def get_user_profile(user: dict = Depends(get_current_user)):
+    """Fetch the current user's profile. Returns onboarded status and all stored fields."""
+    from app.database import get_collection
+    from bson import ObjectId
+
+    try:
+        users_col = get_collection("users")
+        db_user = users_col.find_one({"_id": ObjectId(user["user_id"])})
+
+        if not db_user:
+            return {"onboarded": False}
+
+        profile = db_user.get("profile", {})
+        return {
+            "onboarded":       db_user.get("onboarded", False),
+            "full_name":       db_user.get("full_name"),
+            "dob":             profile.get("dob"),
+            "age":             profile.get("age"),
+            "gender":          profile.get("gender"),
+            "role":            profile.get("role"),
+            "country":         profile.get("country"),
+            "state":           profile.get("state"),
+            "native_language": profile.get("native_language"),
+        }
+    except Exception as e:
+        logger.error(f"❌ GET PROFILE ERROR: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.put("/auth/profile")
+@router.put("/api/auth/profile")
+async def update_user_profile(payload: UserProfileUpdate, user: dict = Depends(get_current_user)):
+    """Save onboarding details for the user. Marks onboarded=True once saved."""
+    from app.database import get_collection
+    from bson import ObjectId
+    from datetime import datetime
+
+    try:
+        age = _calculate_age(payload.dob)
+        users_col = get_collection("users")
+
+        users_col.update_one(
+            {"_id": ObjectId(user["user_id"])},
+            {"$set": {
+                "full_name":  payload.full_name,
+                "onboarded":  True,
+                "profile": {
+                    "dob":             payload.dob,
+                    "age":             age,
+                    "gender":          payload.gender,
+                    "role":            payload.role,
+                    "country":         payload.country,
+                    "state":           payload.state,
+                    "native_language": payload.native_language,
+                },
+                "updated_at": datetime.utcnow()
+            }},
+            upsert=False
+        )
+
+        # Keep Firebase displayName in sync
+        try:
+            from firebase_admin import auth as firebase_auth
+            firebase_auth.update_user(user.get("firebase_uid", ""), display_name=payload.full_name)
+        except Exception:
+            pass  # Non-critical
+
+        logger.info(f"✅ Profile updated for {user['email']}")
+        return {"success": True, "age": age, "message": "Profile saved successfully."}
+
+    except Exception as e:
+        logger.error(f"❌ UPDATE PROFILE ERROR: {e}")
         raise HTTPException(status_code=500, detail=str(e))

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider } from './contexts/AuthContext';
 import ProtectedRoute from './components/ProtectedRoute';
+import { OnboardingModal } from './components/OnboardingModal';
 import Navbar from './components/Navbar';
 import HomePage from './pages/HomePage';
 import WordDetailPage from './pages/WordDetailPage';
@@ -123,7 +124,7 @@ const ServerSplash: React.FC = () => (
 
 /* ═══════════════════════════════════════════════════════════ */
 function AppContent() {
-  const { isAuthenticated, isLoading } = useAuth();
+  const { isAuthenticated, isLoading, isEmailVerified, isOnboarded } = useAuth();
 
   // State-driven splash variables
   const [logoTimeElapsed, setLogoTimeElapsed] = React.useState(false);
@@ -221,6 +222,11 @@ function AppContent() {
         {splashPhase === 'logo'   && <LogoSplash />}
         {splashPhase === 'server' && <ServerSplash />}
       </AnimatePresence>
+
+      {/* Onboarding overlay — shown after splash, before main app */}
+      {splashPhase === 'app' && isAuthenticated && isEmailVerified && !isOnboarded && (
+        <OnboardingModal onComplete={() => {}} />
+      )}
 
       {/* Main app (rendered underneath, so transition is seamless) */}
       <Router future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>

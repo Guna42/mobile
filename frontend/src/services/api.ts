@@ -141,6 +141,28 @@ export interface AuthResponse {
   token?: string;
 }
 
+export interface UserProfile {
+  onboarded: boolean;
+  full_name?: string | null;
+  dob?: string | null;
+  age?: number | null;
+  gender?: string | null;
+  role?: string | null;
+  country?: string | null;
+  state?: string | null;
+  native_language?: string | null;
+}
+
+export interface UserProfilePayload {
+  full_name: string;
+  dob: string;
+  gender: string;
+  role: string;
+  country: string;
+  state: string;
+  native_language: string;
+}
+
 export const emotionAPI = {
   // Get all core emotions
   getCores: async (): Promise<string[]> => {
@@ -346,6 +368,17 @@ export const emotionAPI = {
 
   requestDeleteAccount: async (): Promise<{ success: boolean; message: string }> => {
     const response = await api.post('/auth/request-delete-account');
+    return response.data;
+  },
+
+  // ── User Profile (Onboarding) ──────────────────────────────
+  getUserProfile: async (): Promise<UserProfile> => {
+    const response = await api.get('/auth/profile');
+    return response.data;
+  },
+
+  updateUserProfile: async (data: UserProfilePayload): Promise<{ success: boolean; age: number; message: string }> => {
+    const response = await api.put('/auth/profile', data);
     return response.data;
   },
 };
