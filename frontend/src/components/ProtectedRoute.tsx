@@ -31,6 +31,7 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
                         <h1 className="text-4xl font-heading font-black text-primary tracking-tighter italic">Verify your identity.</h1>
                         <p className="text-sm text-secondary/60 leading-relaxed">
                             We've sent a verification link to your email. Please click it to activate your Emolit account.
+                            <span className="block mt-2 text-xs text-rose-500/80 font-bold">✉️ Check your spam folder if you don't see it in your inbox!</span>
                         </p>
                     </div>
 

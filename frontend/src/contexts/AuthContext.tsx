@@ -129,7 +129,6 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             
             if (!firebaseUser.emailVerified) {
                 toast.error("Please verify your email before logging in.");
-                // We let them "login" but the ProtectedRoute will handle the restriction
             }
 
             const idToken = await firebaseUser.getIdToken();
@@ -137,6 +136,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 email: firebaseUser.email || '',
                 full_name: firebaseUser.displayName || firebaseUser.email?.split('@')[0] || 'User'
             };
+
+            // Save to localStorage immediately so API interceptor has it
+            localStorage.setItem('auth_token', idToken);
+            localStorage.setItem('auth_user', JSON.stringify(userData));
 
             setToken(idToken);
             setUser(userData);
@@ -158,15 +161,13 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
             }
 
             // 2. Call FastAPI Backend to generate and send Premium Verification Email
-            // Pass the local dev URL as the continue_url. 
-            // When deployed, this should be the live app URL.
             const response = await emotionAPI.generateAndSendVerification(
                 email, 
                 "http://localhost:5173"
             );
 
             if (response.sent) {
-                toast.success("Verification email sent! Please check your inbox.");
+                toast.success("Verification email sent! Check your inbox or spam folder.");
             } else {
                 toast.error("Account created, but email failed. Try logging in to resend.");
             }
@@ -176,6 +177,10 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 email: firebaseUser.email || '',
                 full_name: fullName || firebaseUser.email?.split('@')[0] || 'User'
             };
+
+            // Save to localStorage immediately so API interceptor has it
+            localStorage.setItem('auth_token', idToken);
+            localStorage.setItem('auth_user', JSON.stringify(userData));
 
             setToken(idToken);
             setUser(userData);
@@ -195,7 +200,7 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
                 );
                 
                 if (response.sent) {
-                    toast.success("Premium Verification email resent!");
+                    toast.success("Verification email resent! Check your inbox or spam.");
                 } else {
                     toast.error("Failed to send premium email. Try again later.");
                 }

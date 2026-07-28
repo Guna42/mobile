@@ -60,7 +60,7 @@ const JournalHistoryPage: React.FC = () => {
     }, [history]);
 
     const statsMetrics = useMemo(() => {
-        const dates = Object.keys(dataMap).sort().reverse();
+        const dates = Object.keys(dataMap).filter(d => dataMap[d].some(item => item.type === 'journal')).sort().reverse();
         if (dates.length === 0) return { current: 0, highest: 0 };
         
         let current = 0;
@@ -79,7 +79,7 @@ const JournalHistoryPage: React.FC = () => {
 
         let highest = 0;
         let temp = 0;
-        const sortedDates = Object.keys(dataMap).sort();
+        const sortedDates = Object.keys(dataMap).filter(d => dataMap[d].some(item => item.type === 'journal')).sort();
         for (let i = 0; i < sortedDates.length; i++) {
             if (i === 0) { temp = 1; }
             else {

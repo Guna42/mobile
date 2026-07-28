@@ -481,7 +481,16 @@ class JournalService:
                     if emotion in self.emotion_index.allowed_words and emotion not in candidates:
                         candidates.append(emotion)
 
-        for emotion in FALLBACK_EMOTIONS:
+        # Sentiment-aware fallbacks (prevents positive entries getting overwhelmed/disappointed)
+        is_positive = any(pw in entry_lower for pw in [
+            "happy", "good", "great", "amazing", "love", "glad", "joy", "proud", "excited",
+            "content", "peace", "calm", "won", "hope", "thankful", "grateful", "fine", "cool"
+        ])
+        fallback_list = [
+            "peaceful", "relaxed", "confident", "accomplished", "fulfilled", "satisfied"
+        ] if is_positive else FALLBACK_EMOTIONS
+
+        for emotion in fallback_list:
             if emotion in self.emotion_index.allowed_words and emotion not in candidates:
                 candidates.append(emotion)
             if len(candidates) >= 4:

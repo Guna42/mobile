@@ -66,7 +66,7 @@ const Inp: React.FC<{
       style={{
         width: '100%', boxSizing: 'border-box',
         background: '#f8fbf9', border: `1.5px solid ${P}18`,
-        borderRadius: 14, padding: '14px 44px 14px 46px',
+        borderRadius: 14, padding: '13px 42px 13px 44px',
         fontSize: 15, color: P, fontWeight: 500,
         outline: 'none', transition: 'border-color .2s, box-shadow .2s',
         fontFamily: 'inherit',
@@ -94,7 +94,7 @@ const Sel: React.FC<{ icon: React.ReactNode; placeholder: string; value: string;
       style={{
         width: '100%', boxSizing: 'border-box',
         background: '#f8fbf9', border: `1.5px solid ${P}18`,
-        borderRadius: 14, padding: '14px 44px 14px 46px',
+        borderRadius: 14, padding: '13px 42px 13px 44px',
         fontSize: 15, color: value ? P : `${P}55`, fontWeight: 500,
         outline: 'none', appearance: 'none', cursor: 'pointer',
         fontFamily: 'inherit',
@@ -116,7 +116,7 @@ const Pill: React.FC<{ label: string; active: boolean; onClick: () => void }> = 
     onClick={onClick}
     whileTap={{ scale: 0.95 }}
     style={{
-      padding: '8px 16px', borderRadius: 999, fontSize: 13, fontWeight: 600,
+      padding: '7px 15px', borderRadius: 999, fontSize: 13, fontWeight: 600,
       border: `1.5px solid ${active ? P : `${P}25`}`,
       background: active ? P : 'white',
       color: active ? 'white' : `${P}99`,
@@ -166,9 +166,7 @@ const FloatingLeaves = () => (
         style={{ position: 'absolute', width: l.size, height: l.size, ...l } as any}
         animate={{ y: [0, -10, 0], rotate: [l.rot, l.rot + 8, l.rot] }}
         transition={{ duration: 4 + i, delay: l.delay, repeat: Infinity, ease: 'easeInOut' }}>
-        <svg viewBox="0 0 40 40" fill="none">
-          <path d="M20 2C10 2 2 12 2 22c0 6 4 12 18 16C34 34 38 28 38 22 38 12 30 2 20 2z" fill={`${LEAF}25`}/>
-        </svg>
+        <img src="/assets/leaf.png" alt="Floating Leaf" style={{ width: '100%', height: '100%', opacity: 0.18, objectFit: 'contain' }} />
       </motion.div>
     ))}
   </div>
@@ -176,7 +174,7 @@ const FloatingLeaves = () => (
 
 // ─── Progress Bar ──────────────────────────────────────────────────
 const ProgressBar: React.FC<{ step: number; total: number }> = ({ step, total }) => (
-  <div style={{ display: 'flex', gap: 6, width: '100%', marginBottom: 24 }}>
+  <div style={{ display: 'flex', gap: 6, width: '100%', marginBottom: 14 }}>
     {Array.from({ length: total }).map((_, i) => (
       <div key={i} style={{ flex: 1, height: 3, borderRadius: 99, background: i < step ? P : `${P}20`, overflow: 'hidden' }}>
         {i === step - 1 && (
@@ -292,7 +290,7 @@ const LoginPage: React.FC = () => {
 
       // 2. Save profile details immediately
       // We need to wait a moment for the token to be set in context
-      await new Promise(r => setTimeout(r, 1200));
+      await new Promise(r => setTimeout(r, 200));
 
       try {
         await emotionAPI.updateUserProfile({
@@ -393,54 +391,37 @@ const LoginPage: React.FC = () => {
             style={{ ...card, zIndex: 1 }}>
 
             {/* Logo top bar */}
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 28 }}>
-              <img src="/logo.png" alt="Emolit" style={{ height: 36, objectFit: 'contain' }} />
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 20 }}>
+              <img src="/logo.png" alt="Emolit" style={{ height: 52, objectFit: 'contain' }} />
             </div>
 
-            {/* Hero illustration placeholder with gradient */}
-            <div style={{ width: '100%', height: 200, borderRadius: 20, background: 'linear-gradient(135deg, #d4ede4 0%, #b8dfcc 50%, #a8d4be 100%)', marginBottom: 28, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {/* Animated sun */}
-              <motion.div animate={{ scale: [1, 1.08, 1] }} transition={{ duration: 3, repeat: Infinity, ease: 'easeInOut' }}
-                style={{ position: 'absolute', top: 30, left: '50%', transform: 'translateX(-50%)', width: 52, height: 52, borderRadius: '50%', background: 'rgba(255,210,100,0.9)', boxShadow: '0 0 30px rgba(255,210,100,0.5)' }} />
-              {/* Hills */}
-              <svg viewBox="0 0 360 120" style={{ position: 'absolute', bottom: 0, width: '100%' }}>
-                <ellipse cx="180" cy="160" rx="220" ry="120" fill="#4caf8255"/>
-                <ellipse cx="80" cy="170" rx="140" ry="100" fill="#1a6b5a33"/>
-                <ellipse cx="290" cy="170" rx="140" ry="100" fill="#1a6b5a22"/>
-                {/* Path */}
-                <path d="M140 120 Q180 80 220 120" stroke="#e8d5a0" strokeWidth="6" fill="none" strokeLinecap="round"/>
-              </svg>
-              {/* Left plant */}
-              <svg viewBox="0 0 60 120" style={{ position: 'absolute', bottom: 0, left: 10, width: 50, height: 100 }}>
-                <path d="M30 120 Q30 80 30 60" stroke="#2d8a6a" strokeWidth="3" fill="none"/>
-                <path d="M30 80 Q10 60 5 40" stroke="#3aab6a" strokeWidth="2.5" fill="none"/>
-                <ellipse cx="5" cy="38" rx="12" ry="18" fill="#4caf8299" transform="rotate(-20,5,38)"/>
-                <path d="M30 70 Q50 50 55 30" stroke="#3aab6a" strokeWidth="2.5" fill="none"/>
-                <ellipse cx="55" cy="28" rx="12" ry="18" fill="#58c98899" transform="rotate(20,55,28)"/>
-              </svg>
-              {/* Right plant (pink leaves) */}
-              <svg viewBox="0 0 60 120" style={{ position: 'absolute', bottom: 0, right: 10, width: 50, height: 100 }}>
-                <path d="M30 120 Q30 80 30 60" stroke="#c47a8a" strokeWidth="3" fill="none"/>
-                <ellipse cx="15" cy="60" rx="14" ry="22" fill="#e9a0b099" transform="rotate(-15,15,60)"/>
-                <ellipse cx="45" cy="50" rx="14" ry="22" fill="#e9a0b088" transform="rotate(15,45,50)"/>
-              </svg>
+            {/* Hero illustration */}
+            <div style={{ width: '100%', height: 190, marginBottom: 22, position: 'relative', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <motion.img 
+                src="/assets/signup.png" 
+                alt="Emolit Signup Illustration" 
+                style={{ height: '100%', width: 'auto', objectFit: 'contain' }}
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ duration: 0.6 }}
+              />
             </div>
 
             {/* Hero text */}
-            <div style={{ textAlign: 'center', marginBottom: 28 }}>
-              <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 32, fontWeight: 900, color: P, margin: 0, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
+            <div style={{ textAlign: 'center', marginBottom: 22 }}>
+              <h1 style={{ fontFamily: "'Playfair Display', serif", fontSize: 30, fontWeight: 900, color: P, margin: 0, letterSpacing: '-0.02em', lineHeight: 1.1 }}>
                 Start Fresh.
               </h1>
-              <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.22em', textTransform: 'uppercase', color: LEAF, margin: '6px 0 12px' }}>
+              <p style={{ fontSize: 10, fontWeight: 800, letterSpacing: '0.22em', textTransform: 'uppercase', color: LEAF, margin: '5px 0 10px' }}>
                 Begin Your Emotional Odyssey
               </p>
-              <p style={{ fontSize: 14, color: `${P}99`, lineHeight: 1.6, margin: 0 }}>
+              <p style={{ fontSize: 14, color: `${P}95`, lineHeight: 1.6, margin: 0 }}>
                 A safe space to understand, express and grow through your emotions.
               </p>
             </div>
 
             {/* Feature pills */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 28 }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12, marginBottom: 24 }}>
               {[
                 { icon: <IconShield />, title: 'Private & Secure', sub: 'Your data is always protected' },
                 { icon: <IconLang />, title: 'Mindful Growth', sub: 'Build self-awareness, one step at a time' },
@@ -464,7 +445,7 @@ const LoginPage: React.FC = () => {
               Begin Your Journey <IconArrow />
             </Btn>
 
-            <p style={{ textAlign: 'center', fontSize: 13, color: `${P}80`, marginTop: 18 }}>
+            <p style={{ textAlign: 'center', fontSize: 13, color: `${P}80`, marginTop: 18, marginBottom: 0 }}>
               Already have an account?{' '}
               <button onClick={() => go('login')} style={{ background: 'none', border: 'none', color: P, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}>
                 Sign In
@@ -480,23 +461,20 @@ const LoginPage: React.FC = () => {
             style={{ ...card, zIndex: 1 }}>
 
             {/* Back + logo */}
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 28 }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 24 }}>
               <motion.button whileTap={{ scale: 0.9 }} type="button" onClick={() => go('welcome', -1)}
                 style={{ width: 36, height: 36, borderRadius: 10, background: `${P}10`, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: P }}>
                 <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </motion.button>
-              <img src="/logo.png" alt="Emolit" style={{ height: 28, objectFit: 'contain', margin: '0 auto', marginRight: 36 }} />
+              <img src="/logo.png" alt="Emolit" style={{ height: 36, objectFit: 'contain', margin: '0 auto', marginRight: 36 }} />
             </div>
 
-            <div style={{ textAlign: 'center', marginBottom: 28 }}>
-              <div style={{ width: 64, height: 64, borderRadius: 20, background: 'linear-gradient(135deg, #d4ede4, #b8dfcc)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 16px' }}>
-                <svg width="28" height="28" fill="none" viewBox="0 0 40 40">
-                  <path d="M20 4C12 4 6 14 6 22c0 8 6 14 14 14s14-6 14-14C34 14 28 4 20 4z" fill="#4caf8255"/>
-                  <path d="M20 8c-5 0-8 6-8 10" stroke="#1a6b5a" strokeWidth="2" strokeLinecap="round"/>
-                </svg>
+            <div style={{ textAlign: 'center', marginBottom: 24 }}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 16 }}>
+                <img src="/assets/leaf.png" alt="Leaf Brand Logo" style={{ width: 96, height: 96, objectFit: 'contain' }} />
               </div>
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 900, color: P, margin: 0 }}>Welcome back</h2>
-              <p style={{ fontSize: 13, color: `${P}80`, marginTop: 6 }}>Let's continue your journey.</p>
+              <p style={{ fontSize: 13.5, color: `${P}80`, marginTop: 6 }}>Let's continue your journey.</p>
             </div>
 
             <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
@@ -511,12 +489,8 @@ const LoginPage: React.FC = () => {
               </div>
 
               {/* Privacy note */}
-              <div style={{ background: `${P}08`, borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ color: P, flexShrink: 0 }}><IconShield /></div>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: P }}>Your privacy matters</div>
-                  <div style={{ fontSize: 11, color: `${P}80` }}>We never share your personal data.</div>
-                </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: `${P}70`, fontSize: 12.5, margin: '6px 0' }}>
+                <IconShield /> <span>Your data is completely private &amp; secure</span>
               </div>
 
               <Btn disabled={loading}>
@@ -524,7 +498,7 @@ const LoginPage: React.FC = () => {
               </Btn>
             </form>
 
-            <p style={{ textAlign: 'center', fontSize: 13, color: `${P}80`, marginTop: 20 }}>
+            <p style={{ textAlign: 'center', fontSize: 13, color: `${P}80`, marginTop: 20, marginBottom: 0 }}>
               New to Emolit?{' '}
               <button onClick={() => go('reg1')} style={{ background: 'none', border: 'none', color: P, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}>
                 Create Account
@@ -539,7 +513,7 @@ const LoginPage: React.FC = () => {
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             style={{ ...card, zIndex: 1 }}>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <motion.button whileTap={{ scale: 0.9 }} type="button" onClick={() => go('welcome', -1)}
                 style={{ width: 36, height: 36, borderRadius: 10, background: `${P}10`, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: P }}>
                 <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -549,15 +523,15 @@ const LoginPage: React.FC = () => {
 
             <ProgressBar step={1} total={3} />
 
-            <div style={{ textAlign: 'center', marginBottom: 24 }}>
-              <div style={{ width: 64, height: 64, borderRadius: 20, background: 'linear-gradient(135deg, #d4ede4, #b8dfcc)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
-                <svg width="28" height="28" fill="none" viewBox="0 0 40 40"><path d="M20 2C10 2 4 12 4 20c0 10 8 18 16 18s16-8 16-18C36 12 30 2 20 2z" fill="#4caf8255"/><path d="M20 6c-4 0-8 5-8 9" stroke="#1a6b5a" strokeWidth="2" strokeLinecap="round"/></svg>
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+                <img src="/assets/leaf.png" alt="Leaf Brand Logo" style={{ width: 84, height: 84, objectFit: 'contain' }} />
               </div>
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 900, color: P, margin: 0 }}>Create your space</h2>
-              <p style={{ fontSize: 13, color: `${P}80`, marginTop: 6 }}>Let's get to know you better.</p>
+              <p style={{ fontSize: 13.5, color: `${P}80`, marginTop: 6 }}>Let's get to know you better.</p>
             </div>
 
-            <form onSubmit={handleReg1} style={{ display: 'flex', flexDirection: 'column', gap: 13 }}>
+            <form onSubmit={handleReg1} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <Inp icon={<IconUser />} placeholder="Full Name" value={regName} onChange={setRegName} />
               <Inp icon={<IconMail />} type="email" placeholder="Email Address" value={regEmail} onChange={setRegEmail} />
               <Inp icon={<IconLock />} type={showRegPw ? 'text' : 'password'} placeholder="Password"
@@ -570,18 +544,14 @@ const LoginPage: React.FC = () => {
               <p style={{ fontSize: 11, color: `${P}70`, margin: 0 }}>At least 8 characters with a number &amp; symbol</p>
 
               {/* Privacy note */}
-              <div style={{ background: `${P}08`, borderRadius: 14, padding: '12px 14px', display: 'flex', alignItems: 'center', gap: 12 }}>
-                <div style={{ color: P, flexShrink: 0 }}><IconShield /></div>
-                <div>
-                  <div style={{ fontSize: 13, fontWeight: 700, color: P }}>Your privacy matters</div>
-                  <div style={{ fontSize: 11, color: `${P}80` }}>We never share your personal data.</div>
-                </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, color: `${P}70`, fontSize: 12.5, margin: '4px 0' }}>
+                <IconShield /> <span>Your data is completely private &amp; secure</span>
               </div>
 
               <Btn>Continue <IconArrow /></Btn>
             </form>
 
-            <p style={{ textAlign: 'center', fontSize: 13, color: `${P}80`, marginTop: 18 }}>
+            <p style={{ textAlign: 'center', fontSize: 13, color: `${P}80`, marginTop: 20, marginBottom: 0 }}>
               Already have an account?{' '}
               <button onClick={() => go('login', -1)} style={{ background: 'none', border: 'none', color: P, fontWeight: 700, cursor: 'pointer', fontFamily: 'inherit', fontSize: 13 }}>
                 Sign In
@@ -596,7 +566,7 @@ const LoginPage: React.FC = () => {
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             style={{ ...card, zIndex: 1 }}>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <motion.button whileTap={{ scale: 0.9 }} type="button" onClick={() => go('reg1', -1)}
                 style={{ width: 36, height: 36, borderRadius: 10, background: `${P}10`, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: P }}>
                 <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -606,18 +576,18 @@ const LoginPage: React.FC = () => {
 
             <ProgressBar step={2} total={3} />
 
-            <div style={{ textAlign: 'center', marginBottom: 24 }}>
-              <div style={{ width: 64, height: 64, borderRadius: 20, background: 'linear-gradient(135deg, #d4ede4, #b8dfcc)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
-                <svg width="28" height="28" fill="none" viewBox="0 0 40 40"><path d="M20 5a15 15 0 1 0 0 30A15 15 0 0 0 20 5z" fill="#4caf8255"/><path d="M14 22a8 8 0 0 0 12 0" stroke="#1a6b5a" strokeWidth="2" strokeLinecap="round"/><circle cx="15" cy="17" r="2" fill="#1a6b5a"/><circle cx="25" cy="17" r="2" fill="#1a6b5a"/></svg>
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+                <img src="/assets/leaf.png" alt="Leaf Brand Logo" style={{ width: 84, height: 84, objectFit: 'contain' }} />
               </div>
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 900, color: P, margin: 0 }}>About you</h2>
-              <p style={{ fontSize: 13, color: `${P}80`, marginTop: 6 }}>Help us personalize your experience.</p>
+              <p style={{ fontSize: 13.5, color: `${P}80`, marginTop: 6 }}>Help us personalize your experience.</p>
             </div>
 
-            <form onSubmit={handleReg2} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            <form onSubmit={handleReg2} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {/* DOB */}
               <div>
-                <label style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', color: `${P}70`, display: 'block', marginBottom: 8 }}>
+                <label style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', color: `${P}70`, display: 'block', marginBottom: 6 }}>
                   Date of Birth
                 </label>
                 <Inp icon={<IconCalendar />} type="date" placeholder="Date of Birth" value={regDob} onChange={setRegDob} max={today} />
@@ -625,7 +595,7 @@ const LoginPage: React.FC = () => {
 
               {/* Gender */}
               <div>
-                <label style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', color: `${P}70`, display: 'block', marginBottom: 8 }}>
+                <label style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', color: `${P}70`, display: 'block', marginBottom: 6 }}>
                   Gender
                 </label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -635,7 +605,7 @@ const LoginPage: React.FC = () => {
 
               {/* Role */}
               <div>
-                <label style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', color: `${P}70`, display: 'block', marginBottom: 8 }}>
+                <label style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', color: `${P}70`, display: 'block', marginBottom: 6 }}>
                   I am a
                 </label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -654,7 +624,7 @@ const LoginPage: React.FC = () => {
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             style={{ ...card, zIndex: 1 }}>
 
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
               <motion.button whileTap={{ scale: 0.9 }} type="button" onClick={() => go('reg2', -1)}
                 style={{ width: 36, height: 36, borderRadius: 10, background: `${P}10`, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: P }}>
                 <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
@@ -664,24 +634,24 @@ const LoginPage: React.FC = () => {
 
             <ProgressBar step={3} total={3} />
 
-            <div style={{ textAlign: 'center', marginBottom: 24 }}>
-              <div style={{ width: 64, height: 64, borderRadius: 20, background: 'linear-gradient(135deg, #d4ede4, #b8dfcc)', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 14px' }}>
-                <svg width="28" height="28" fill="none" viewBox="0 0 40 40"><circle cx="20" cy="20" r="16" fill="#4caf8255"/><path d="M20 6c-4 5-7 9-7 13s3 8 7 10c4-2 7-6 7-10S24 11 20 6z" stroke="#1a6b5a" strokeWidth="2" strokeLinejoin="round"/><path d="M6 20h28" stroke="#1a6b5a" strokeWidth="2" strokeLinecap="round"/></svg>
+            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+              <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+                <img src="/assets/leaf.png" alt="Leaf Brand Logo" style={{ width: 84, height: 84, objectFit: 'contain' }} />
               </div>
               <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 900, color: P, margin: 0 }}>Where are you from?</h2>
-              <p style={{ fontSize: 13, color: `${P}80`, marginTop: 6 }}>Almost there — just one more step.</p>
+              <p style={{ fontSize: 13.5, color: `${P}80`, marginTop: 6 }}>Almost there — just one more step.</p>
             </div>
 
-            <form onSubmit={handleReg3} style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+            <form onSubmit={handleReg3} style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               {/* Country */}
               <div>
-                <label style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', color: `${P}70`, display: 'block', marginBottom: 8 }}>Country</label>
+                <label style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', color: `${P}70`, display: 'block', marginBottom: 6 }}>Country</label>
                 <Sel icon={<IconGlobe />} placeholder="Select Country" value={regCountry} onChange={v => { setRegCountry(v); setRegState(''); }} options={COUNTRIES} />
               </div>
 
               {/* State */}
               <div>
-                <label style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', color: `${P}70`, display: 'block', marginBottom: 8 }}>State / Region</label>
+                <label style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', color: `${P}70`, display: 'block', marginBottom: 6 }}>State / Region</label>
                 {STATE_MAP[regCountry] ? (
                   <Sel icon={<IconMap />} placeholder="Select State" value={regState} onChange={setRegState} options={STATE_MAP[regCountry]} />
                 ) : (
@@ -691,8 +661,8 @@ const LoginPage: React.FC = () => {
 
               {/* Native Language */}
               <div>
-                <label style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', color: `${P}70`, display: 'block', marginBottom: 8 }}>Native Language</label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 7 }}>
+                <label style={{ fontSize: 11, fontWeight: 800, letterSpacing: '0.15em', textTransform: 'uppercase', color: `${P}70`, display: 'block', marginBottom: 6 }}>Native Language</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {LANGUAGES.map(l => <Pill key={l} label={l} active={regLang === l} onClick={() => setRegLang(l)} />)}
                 </div>
               </div>
@@ -710,23 +680,23 @@ const LoginPage: React.FC = () => {
             transition={{ type: 'spring', stiffness: 300, damping: 30 }}
             style={{ ...card, zIndex: 1 }}>
 
-            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 28 }}>
+            <div style={{ display: 'flex', alignItems: 'center', marginBottom: 16 }}>
               <motion.button whileTap={{ scale: 0.9 }} type="button" onClick={() => { go('login', -1); setForgotStep(1); setOtp(''); setNewPw(''); }}
                 style={{ width: 36, height: 36, borderRadius: 10, background: `${P}10`, border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: P }}>
                 <svg width="18" height="18" fill="none" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
               </motion.button>
             </div>
 
-            <div style={{ textAlign: 'center', marginBottom: 28 }}>
-              <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 24, fontWeight: 900, color: P, margin: 0 }}>Reset Password.</h2>
-              <p style={{ fontSize: 13, color: `${P}80`, marginTop: 8 }}>
+            <div style={{ textAlign: 'center', marginBottom: 16 }}>
+              <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: 22, fontWeight: 900, color: P, margin: 0 }}>Reset Password.</h2>
+              <p style={{ fontSize: 13, color: `${P}80`, marginTop: 6 }}>
                 {forgotStep === 1 && 'Enter your email to receive a secure code'}
                 {forgotStep === 2 && 'Enter the 6-digit code sent to your email'}
                 {forgotStep === 3 && 'Create a secure new password'}
               </p>
             </div>
 
-            <form onSubmit={handleForgot} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <form onSubmit={handleForgot} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <AnimatePresence mode="wait">
                 <motion.div key={forgotStep} initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}>
                   {forgotStep === 1 && <Inp icon={<IconMail />} type="email" placeholder="Email Address" value={forgotEmail} onChange={setForgotEmail} />}

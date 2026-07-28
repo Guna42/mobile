@@ -176,32 +176,7 @@ const CalendarPage: React.FC = () => {
     const [selDay, setSelDay] = useState(formatDate(new Date()));
     const [loading, setLoading] = useState(true);
     const [isAnalyzingWeekly, setIsAnalyzingWeekly] = useState(false);
-    const [isDeleting, setIsDeleting] = useState(false);
-    const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
 
-    const handleDeleteRequest = async () => {
-        setIsDeleting(true);
-        try {
-            const res = await emotionAPI.requestDeleteAccount();
-            if (res.success) {
-                toast.success("Verification link sent! Check your email.", {
-                    style: {
-                        background: '#2F8F83',
-                        color: '#fff',
-                        borderRadius: '1rem',
-                    }
-                });
-                setShowDeleteConfirm(false);
-            } else {
-                toast.error("Failed to send deletion verification link.");
-            }
-        } catch (err: any) {
-            const msg = err?.response?.data?.detail || err?.message || "Error requesting account deletion.";
-            toast.error(msg);
-        } finally {
-            setIsDeleting(false);
-        }
-    };
 
     useEffect(() => {
         if ((window as any).mixpanel) {
@@ -236,7 +211,7 @@ const CalendarPage: React.FC = () => {
     }, [history]);
 
     const streakData = useMemo(() => {
-        const dates = Object.keys(dataMap).sort().reverse();
+        const dates = Object.keys(dataMap).filter(d => dataMap[d].some(item => item.type === 'journal')).sort().reverse();
         if (dates.length === 0) return { current: 0, highest: 0 };
         
         let current = 0;
@@ -257,7 +232,7 @@ const CalendarPage: React.FC = () => {
         }
 
         // Calculate Highest Streak
-        const sortedDates = Object.keys(dataMap).sort();
+        const sortedDates = Object.keys(dataMap).filter(d => dataMap[d].some(item => item.type === 'journal')).sort();
         if (sortedDates.length > 0) {
             temp = 1;
             highest = 1;
@@ -438,7 +413,7 @@ const CalendarPage: React.FC = () => {
                             if (!date) return <div key={idx} className="aspect-square" />;
                             const dStr = date as string;
                             const isSel = selDay === dStr;
-                            const hasAct = (dataMap[dStr] || []).length > 0;
+                            const hasAct = (dataMap[dStr] || []).some(item => item.type === 'journal');
                             const dayNum = new Date(dStr).getDate();
                             const isToday = dStr === formatDate(new Date());
 
@@ -634,53 +609,6 @@ const CalendarPage: React.FC = () => {
                     <p className="text-primary font-heading font-bold italic leading-tight">
                         "{insight}"
                     </p>
-                </div>
-
-                {/* SECURITY & PRIVACY CARD */}
-                <div className="bg-rose-50/20 border border-rose-100/40 rounded-3xl p-8 space-y-6">
-                    <div className="flex items-center gap-2 text-rose-500">
-                        <div className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse"></div>
-                        <span className="text-[10px] font-heading font-black uppercase tracking-widest">Security & Privacy</span>
-                    </div>
-                    
-                    {!showDeleteConfirm ? (
-                        <div className="flex items-center justify-between gap-4">
-                            <div className="space-y-1">
-                                <h4 className="text-sm font-bold text-primary">Delete Emolit Account</h4>
-                                <p className="text-xs text-secondary/60">Permanently delete your profile and all journal data.</p>
-                            </div>
-                            <button
-                                onClick={() => setShowDeleteConfirm(true)}
-                                className="px-4 py-2.5 bg-rose-50 hover:bg-rose-100/50 text-rose-600 text-xs font-bold rounded-xl transition-all"
-                            >
-                                Delete Account
-                            </button>
-                        </div>
-                    ) : (
-                        <div className="space-y-4">
-                            <p className="text-xs text-rose-700 font-bold leading-relaxed">
-                                Are you sure you want to delete your account? This will send a secure verification link to your email to permanently delete all your entries and profile.
-                            </p>
-                            <div className="flex gap-2">
-                                <button
-                                    onClick={handleDeleteRequest}
-                                    disabled={isDeleting}
-                                    className="px-4 py-2.5 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl disabled:opacity-50 transition-all flex items-center gap-2"
-                                >
-                                    {isDeleting ? (
-                                        <CircleNotch className="animate-spin" size={14} />
-                                    ) : 'Send Verification Link'}
-                                </button>
-                                <button
-                                    onClick={() => setShowDeleteConfirm(false)}
-                                    disabled={isDeleting}
-                                    className="px-4 py-2.5 bg-light-bg hover:bg-primary/5 text-primary text-xs font-bold rounded-xl transition-all"
-                                >
-                                    Cancel
-                                </button>
-                            </div>
-                        </div>
-                    )}
                 </div>
             </div>
         </div>

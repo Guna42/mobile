@@ -381,6 +381,29 @@ export const emotionAPI = {
     const response = await api.put('/auth/profile', data);
     return response.data;
   },
+
+  // ── Feedback & Help Support System ─────────────────────────
+  submitFeedback: async (data: { q1: string; q2: string }): Promise<{ success: boolean; message: string }> => {
+    // Try api/auth/feedback first, fallback to auth/feedback
+    try {
+      const response = await api.post('/api/auth/feedback', data);
+      return response.data;
+    } catch {
+      const response = await api.post('/auth/feedback', data);
+      return response.data;
+    }
+  },
+
+  submitSupport: async (data: { category: string; subject: string; message: string }): Promise<{ success: boolean; message: string }> => {
+    // Try api/auth/support first, fallback to auth/support
+    try {
+      const response = await api.post('/api/auth/support', data);
+      return response.data;
+    } catch {
+      const response = await api.post('/auth/support', data);
+      return response.data;
+    }
+  },
 };
 
 export default api;

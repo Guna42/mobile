@@ -482,3 +482,79 @@ async def update_user_profile(payload: UserProfileUpdate, user: dict = Depends(g
     except Exception as e:
         logger.error(f"❌ UPDATE PROFILE ERROR: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+# ─────────────────────────────────────────────
+#  FEEDBACK & SUPPORT SYSTEM
+# ─────────────────────────────────────────────
+
+class FeedbackSubmission(BaseModel):
+    q1: str = Field(..., min_length=1)
+    q2: str = Field(..., min_length=1)
+
+class SupportSubmission(BaseModel):
+    category: str = Field(..., min_length=1)
+    subject: str = Field(..., min_length=1)
+    message: str = Field(..., min_length=1)
+
+@router.post("/auth/feedback")
+@router.post("/api/auth/feedback")
+async def submit_feedback(payload: FeedbackSubmission, user: dict = Depends(get_current_user)):
+    from app.database import get_collection
+    from bson import ObjectId
+    from datetime import datetime
+
+    try:
+        feedback_col = get_collection("feedbacks")
+        users_col = get_collection("users")
+        db_user = users_col.find_one({"_id": ObjectId(user["user_id"])}) or {}
+        
+        feedback_doc = {
+            "user_id": ObjectId(user["user_id"]),
+            "user_email": user["email"],
+            "user_name": db_user.get("full_name") or user.get("full_name") or user["email"].split("@")[0],
+            "q1": payload.q1,
+            "q2": payload.q2,
+            "profile": db_user.get("profile", {}),
+            "created_at": datetime.utcnow()
+        }
+        
+        feedback_col.insert_one(feedback_doc)
+        logger.info(f"✅ Feedback collected from {user['email']}")
+        return {"success": True, "message": "Feedback submitted successfully."}
+    except Exception as e:
+        logger.error(f"❌ SUBMIT FEEDBACK ERROR: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/auth/support")
+@router.post("/api/auth/support")
+async def submit_support(payload: SupportSubmission, user: dict = Depends(get_current_user)):
+    from app.database import get_collection
+    from bson import ObjectId
+    from datetime import datetime
+
+    try:
+        support_col = get_collection("supports")
+        users_col = get_collection("users")
+        db_user = users_col.find_one({"_id": ObjectId(user["user_id"])}) or {}
+
+        support_doc = {
+            "user_id": ObjectId(user["user_id"]),
+            "user_email": user["email"],
+            "user_name": db_user.get("full_name") or user.get("full_name") or user["email"].split("@")[0],
+            "category": payload.category,
+            "subject": payload.subject,
+            "message": payload.message,
+            "status": "open",
+            "profile": db_user.get("profile", {}),
+            "created_at": datetime.utcnow()
+        }
+
+        support_col.insert_one(support_doc)
+        logger.info(f"✅ Support request collected from {user['email']}")
+        return {"success": True, "message": "Support request submitted successfully."}
+    except Exception as e:
+        logger.error(f"❌ SUBMIT SUPPORT ERROR: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+

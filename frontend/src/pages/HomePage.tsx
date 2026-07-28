@@ -178,7 +178,7 @@ const HomePage: React.FC = () => {
   }, [historyRes]);
 
   const streak = (() => {
-    const entries = (historyRes as JournalHistoryResponse | undefined)?.entries ?? [];
+    const entries = ((historyRes as JournalHistoryResponse | undefined)?.entries ?? []).filter(e => e.type === 'journal');
     if (!entries.length) return 0;
     let s = 0;
     const today = new Date(); today.setHours(0,0,0,0);
@@ -197,7 +197,7 @@ const HomePage: React.FC = () => {
   const word       = (dailyWord as any)?.word       ?? 'Resilience';
   const definition = (dailyWord as any)?.metadata?.definition ?? 'The ability to recover quickly from difficulties.';
   const core       = (dailyWord as any)?.core       ?? 'Strength';
-  const totalEntries = (historyRes as JournalHistoryResponse | undefined)?.entries?.length ?? 0;
+  const totalEntries = ((historyRes as JournalHistoryResponse | undefined)?.entries ?? []).filter(e => e.type === 'journal').length;
   const recentEntries = (historyRes as JournalHistoryResponse | undefined)?.entries?.slice(0, 3) ?? [];
 
   return (
@@ -221,56 +221,17 @@ const HomePage: React.FC = () => {
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         borderBottom: `1px solid ${D.border}`,
       }}>
-        {/* Brand logo — leaves precisely over the E */}
-        <div style={{ display: 'flex', alignItems: 'center' }}>
-          <div style={{ position: 'relative', display: 'inline-block' }}>
-            {/* 3-leaf SVG positioned to float over the E only */}
-            <svg
-              width="28" height="20"
-              viewBox="0 0 80 56"
-              fill="none"
-              xmlns="http://www.w3.org/2000/svg"
-              style={{
-                position: 'absolute',
-                top: -14,
-                left: 48,
-                pointerEvents: 'none',
-              }}
-            >
-              <g transform="translate(22,2) rotate(-28,14,32)">
-                <path d="M14 52 C14 52 0 36 1 20 C3 7 10 1 14 0 C18 1 26 7 27 20 C29 36 14 52 14 52Z" fill="#8DC9B0" opacity="0.9"/>
-                <path d="M14 50 C14 36 13 20 14 1" stroke="rgba(255,255,255,0.5)" strokeWidth="1" strokeLinecap="round"/>
-              </g>
-              <g transform="translate(30,0) rotate(-6,12,32)">
-                <path d="M12 55 C12 55 -1 36 1 18 C3 4 9 0 12 0 C15 0 21 4 23 18 C25 36 12 55 12 55Z" fill="#A8D8C4" opacity="0.85"/>
-                <path d="M12 53 C12 36 11 18 12 1" stroke="rgba(255,255,255,0.4)" strokeWidth="0.9" strokeLinecap="round"/>
-              </g>
-              <g transform="translate(48,14) rotate(26,9,25)">
-                <path d="M9 40 C9 40 0 28 0 15 C1 5 5 0 9 0 C13 0 17 5 18 15 C19 28 9 40 9 40Z" fill="#E8A5B0" opacity="0.88"/>
-                <path d="M9 38 C9 28 8 14 9 1" stroke="rgba(255,255,255,0.3)" strokeWidth="0.8" strokeLinecap="round"/>
-              </g>
-            </svg>
-
-            {/* Brand text */}
-            <div style={{ paddingTop: 4 }}>
-              <div style={{
-                fontFamily: "'Playfair Display', Georgia, serif",
-                fontSize: 22,
-                fontWeight: 600,
-                color: '#2D6B5A',
-                letterSpacing: '-0.01em',
-                lineHeight: 1,
-              }}>Emolit</div>
-              <div style={{
-                fontFamily: "'Poppins', sans-serif",
-                fontSize: 8,
-                fontWeight: 400,
-                color: D.textSub,
-                letterSpacing: '0.05em',
-                marginTop: 2,
-              }}>Understand. Express. Grow.</div>
-            </div>
-          </div>
+        {/* Brand logo image */}
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', paddingTop: 2 }}>
+          <img src="/logo.png" alt="Emolit Logo" style={{ height: 38, objectFit: 'contain' }} />
+          <div style={{
+            fontFamily: "'Poppins', sans-serif",
+            fontSize: 9,
+            fontWeight: 500,
+            color: D.textSub,
+            letterSpacing: '0.01em',
+            marginTop: 4,
+          }}>A safe space for your emotions</div>
         </div>
 
         {/* Notification bell — animated ring */}

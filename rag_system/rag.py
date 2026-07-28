@@ -163,15 +163,53 @@ Map your reflection to these fields:
 5. "pattern_insight": 1 sentence. The trigger, no fluff.
 6. "regulation_suggestion": 1 sentence. One grounding action.
 """
+
+# ── Allowed vocabulary lookup helper ───────────────────────────────────────
+def _load_allowed_words() -> Tuple[set, str]:
+    try:
+        import json
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        path = os.path.join(root, "app", "data", "emotion_database.json")
+        if not os.path.exists(path):
+            path = os.path.join(root, "app", "emotion_database.json")
+            
+        with open(path, "r", encoding="utf-8") as f:
+            data = json.load(f)
+            
+        allowed = set()
+        for core, categories in data.items():
+            for category, words in categories.items():
+                for word in words.keys():
+                    key = word.strip().lower()
+                    if key:
+                        allowed.add(key)
+        return allowed, ", ".join(sorted(allowed))
+    except Exception as e:
+        print(f"[rag] Warning: could not load allowed words dataset: {e}")
+        return set(), ""
+
+_allowed_words_set, _allowed_words_text = _load_allowed_words()
+
 def build_prompt(query: str, chunks: List[Dict]) -> str:
     citation_blocks = "\n".join(
         _format_citation(c, i + 1) for i, c in enumerate(chunks)
     )
+    vocab_instruction = ""
+    if _allowed_words_text:
+        vocab_instruction = (
+            f"\nALLOWED EMOTION WORDS:\n"
+            f"You MUST only choose 'detected_emotions' words from this exact list (lowercase only):\n"
+            f"{_allowed_words_text}\n"
+            f"Do NOT use core categories (like Happy, Sad, Angry, Fear, Bad, Surprise) directly as the emotion word. "
+            f"Instead, use the specific sub-emotion words from the allowed list above.\n"
+        )
     return (
         f"USER QUERY:\n{query}\n\n"
         f"RETRIEVED CITATIONS:\n{citation_blocks}\n"
-       f"Analyze the user's emotional state and respond using the required format."
+        f"{vocab_instruction}\n"
+        f"Analyze the user's emotional state and respond using the required format."
     )
+
 
 
 # ── Generation ─────────────────────────────────────────────────────────────

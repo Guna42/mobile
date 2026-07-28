@@ -118,11 +118,21 @@ def send_verification_email(user_email: str, verification_link: str):
 
     body = html_template.replace("{{verification_link}}", verification_link)
 
-    msg = MIMEMultipart()
+    msg = MIMEMultipart('alternative')
     msg['From'] = f"{from_name} <{smtp_user}>"
     msg['To'] = user_email
-    msg['Bcc'] = smtp_user  # Send a copy to yourself to verify it's working
     msg['Subject'] = subject
+    
+    # Plain text version for spam filters
+    text_fallback = (
+        f"Welcome to Emolit!\n\n"
+        f"Please verify your account by opening the following link in your browser:\n"
+        f"{verification_link}\n\n"
+        f"This link will expire in 24 hours.\n\n"
+        f"Didn't create this account? Simply ignore this email.\n"
+        f"© 2026 Emolit · All rights reserved."
+    )
+    msg.attach(MIMEText(text_fallback, 'plain'))
     msg.attach(MIMEText(body, 'html'))
 
     try:
@@ -223,10 +233,20 @@ def send_otp_email(user_email: str, otp_code: str):
 
     body = html_template.replace("{{otp_code}}", otp_code)
 
-    msg = MIMEMultipart()
+    msg = MIMEMultipart('alternative')
     msg['From'] = f"{from_name} <{smtp_user}>"
     msg['To'] = user_email
     msg['Subject'] = subject
+
+    # Plain text version for spam filters
+    text_fallback = (
+        f"Reset your Emolit password\n\n"
+        f"Use the verification code below to authorize your password reset request:\n\n"
+        f"{otp_code}\n\n"
+        f"This code will expire in 5 minutes and is for one-time use only.\n"
+        f"© 2026 Emolit · All rights reserved."
+    )
+    msg.attach(MIMEText(text_fallback, 'plain'))
     msg.attach(MIMEText(body, 'html'))
 
     try:
@@ -320,10 +340,21 @@ def send_deletion_email(user_email: str, deletion_link: str):
 
     body = html_template.replace("{{deletion_link}}", deletion_link)
 
-    msg = MIMEMultipart()
+    msg = MIMEMultipart('alternative')
     msg['From'] = f"{from_name} <{smtp_user}>"
     msg['To'] = user_email
     msg['Subject'] = subject
+
+    # Plain text version for spam filters
+    text_fallback = (
+        f"Confirm permanent deletion of your Emolit account\n\n"
+        f"You have requested to permanently delete your Emolit account. This action is irreversible.\n\n"
+        f"To confirm deletion, open the following link in your browser:\n"
+        f"{deletion_link}\n\n"
+        f"This link will expire in 15 minutes.\n"
+        f"© 2026 Emolit · All rights reserved."
+    )
+    msg.attach(MIMEText(text_fallback, 'plain'))
     msg.attach(MIMEText(body, 'html'))
 
     try:

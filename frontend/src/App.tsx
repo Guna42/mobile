@@ -12,6 +12,7 @@ import JournalPage from './pages/JournalPage';
 import JournalHistoryPage from './pages/JournalHistoryPage';
 import CalendarPage from './pages/CalendarPage';
 import LoginPage from './pages/LoginPage';
+import ProfilePage from './pages/ProfilePage';
 import './index.css';
 
 import { emotionAPI } from './services/api';
@@ -269,6 +270,12 @@ function AppContent() {
             <Route path="/journal/history" element={
               <ProtectedRoute>
                 <><Navbar /><main className="relative z-10"><JournalHistoryPage /></main></>
+              </ProtectedRoute>
+            } />
+
+            <Route path="/profile" element={
+              <ProtectedRoute>
+                <><Navbar /><main className="relative z-10"><ProfilePage /></main></>
               </ProtectedRoute>
             } />
 

@@ -1,6 +1,6 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { House, Compass, CalendarBlank, SignOut, Plus } from '@phosphor-icons/react';
+import { House, Compass, CalendarBlank, UserCircle, Plus } from '@phosphor-icons/react';
 import { useAuth } from '../contexts/AuthContext';
 import { motion } from 'framer-motion';
 import CheckInLoader from './CheckInLoader';
@@ -14,7 +14,7 @@ const INACTIVE  = '#B8C4C2';
 const Navbar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user } = useAuth();
   const [showCheckInLoader, setShowCheckInLoader] = React.useState(false);
 
   if (!user) return null;
@@ -93,7 +93,7 @@ const Navbar: React.FC = () => {
       pointerEvents: 'none',
       display: 'flex',
       justifyContent: 'center',
-      paddingBottom: '20px',
+      paddingBottom: '48px',
     }}>
       {/* Outer wrapper: drop-shadow traces the full U-cutout shape */}
       <motion.div
@@ -162,7 +162,7 @@ const Navbar: React.FC = () => {
           {/* Right 2 */}
           <div style={{ display: 'flex', flex: 1, justifyContent: 'space-around' }}>
             <NavItem path="/calendar" Icon={CalendarBlank} />
-            <NavItem path="#" Icon={SignOut} onClick={() => { logout(); navigate('/login'); }} />
+            <NavItem path="/profile" Icon={UserCircle} />
           </div>
         </div>
 
