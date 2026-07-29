@@ -8,16 +8,30 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordBearer
 from passlib.context import CryptContext
 from dotenv import load_dotenv
+import json
 
 load_dotenv()
 
 # Initialize Firebase Admin
 try:
-    # Use absolute path for the service account file
-    service_account_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "firebase-service-account.json")
     if not firebase_admin._apps:
-        cred = credentials.Certificate(service_account_path)
-        firebase_admin.initialize_app(cred)
+        firebase_creds_json = os.getenv("FIREBASE_CREDENTIALS")
+        if firebase_creds_json:
+            try:
+                creds_dict = json.loads(firebase_creds_json.strip())
+                cred = credentials.Certificate(creds_dict)
+                firebase_admin.initialize_app(cred)
+                print("✅ Firebase Admin initialized from environment variable (FIREBASE_CREDENTIALS)")
+            except Exception as env_e:
+                print(f"⚠️ Firebase Admin initialization from env failed, trying file: {env_e}")
+                service_account_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "firebase-service-account.json")
+                cred = credentials.Certificate(service_account_path)
+                firebase_admin.initialize_app(cred)
+        else:
+            service_account_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "firebase-service-account.json")
+            cred = credentials.Certificate(service_account_path)
+            firebase_admin.initialize_app(cred)
+            print("✅ Firebase Admin initialized from file (firebase-service-account.json)")
 except Exception as e:
     print(f"⚠️ Firebase Admin initialization warning: {e}")
 
